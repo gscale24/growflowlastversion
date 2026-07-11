@@ -5,8 +5,8 @@
 /* ─── ТОЧКИ ПОДКЛЮЧЕНИЯ ВИДЕО ───────────────────────────────
    Подставьте URL своих файлов (mp4/webm). Пока строка пустая,
    вместо видео показывается монохромный фолбэк-фон. */
-const HERO_VIDEO_URL = "";
-const SHOWREEL_VIDEO_URL = "";
+const HERO_VIDEO_URL = "assets/hero.mp4";
+const SHOWREEL_VIDEO_URL = "assets/hero.mp4"; // пока то же видео; замените на отдельный шоурил
 
 const isTouch = window.matchMedia("(hover: none), (pointer: coarse)").matches;
 const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -20,6 +20,11 @@ const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)
   video.classList.add("is-on");
   fallback.style.display = "none";
   video.play().catch(() => {});
+  // если файл не загрузился/кодек не поддержан — возвращаем фолбэк-фон
+  video.addEventListener("error", () => {
+    video.classList.remove("is-on");
+    fallback.style.display = "";
+  });
 })();
 
 /* ═══════════ ШОУРИЛ: play/pause ═══════════ */
@@ -33,6 +38,10 @@ const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)
     video.src = SHOWREEL_VIDEO_URL;
     video.classList.add("is-on");
     fallback.style.display = "none";
+    video.addEventListener("error", () => {
+      video.classList.remove("is-on");
+      fallback.style.display = "";
+    });
   }
 
   toggle.addEventListener("click", () => {
