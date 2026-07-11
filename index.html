@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grow Flow — маркетинговое агентство</title>
+  <meta name="description" content="Grow Flow — маркетинговое агентство полного цикла. SMM, performance-маркетинг, SEO, контент-продакшн, бренд-стратегия.">
+
+  <!--
+    ═══════════════════════════════════════════════════════════
+    ВНИМАНИЕ: весь текстовый контент, кейсы, отзывы, имена команды
+    и статистика на этой странице — ПЛЕЙСХОЛДЕРЫ, подлежат замене.
+    Точки подключения видео: константы HERO_VIDEO_URL и
+    SHOWREEL_VIDEO_URL в начале js/main.js.
+    ═══════════════════════════════════════════════════════════
+  -->
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Manrope:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ═══════════ КАСТОМНЫЙ КУРСОР (отключается на touch) ═══════════ -->
+  <div class="cursor" aria-hidden="true"></div>
+
+  <!-- ═══════════ НАВИГАЦИЯ ═══════════ -->
+  <header class="nav">
+    <a href="#hero" class="nav__logo magnetic" data-hover>Grow&nbsp;Flow<sup>®</sup></a>
+    <nav class="nav__links">
+      <a href="#cases" class="nav__link magnetic" data-hover>Кейсы</a>
+      <a href="#contacts" class="nav__link magnetic" data-hover>Связаться</a>
+    </nav>
+  </header>
+
+  <main>
+
+    <!-- ═══════════ HERO ═══════════ -->
+    <section class="hero" id="hero">
+      <div class="hero__media">
+        <!-- Источник подставляется из HERO_VIDEO_URL (js/main.js). Пока URL пуст — показывается фолбэк-фон. -->
+        <video class="hero__video" id="hero-video" autoplay muted loop playsinline aria-hidden="true"></video>
+        <div class="hero__fallback" id="hero-fallback"></div>
+        <div class="hero__overlay"></div>
+      </div>
+
+      <!-- HUD-метки по углам -->
+      <div class="hud hud--tl" data-parallax="0.05">
+        <span class="hud__dot"></span> Доступны для проектов
+      </div>
+      <div class="hud hud--tr">Москва&nbsp;/&nbsp;UTC+3</div>
+      <div class="hud hud--bl">©2026 Grow Flow</div>
+      <div class="hud hud--br">Маркетинг&nbsp;·&nbsp;Продакшн</div>
+
+      <div class="hero__content">
+        <p class="hero__eyebrow reveal">Маркетинговое агентство полного цикла</p>
+        <h1 class="hero__title">
+          <span class="hero__line reveal">Мы выращиваем</span>
+          <span class="hero__line reveal"><em class="accent">бренды</em>,</span>
+          <span class="hero__line reveal">а не охваты</span>
+        </h1>
+        <a href="#services" class="link-arrow hero__cta magnetic reveal" data-hover>
+          Смотреть, что мы умеем <span class="link-arrow__icon">&rarr;</span>
+        </a>
+      </div>
+
+      <div class="hero__scroll" aria-hidden="true">
+        <span>скролл</span>
+        <span class="hero__scroll-line"></span>
+      </div>
+    </section>
+
+    <!-- ═══════════ БЕГУЩАЯ СТРОКА КЛИЕНТОВ (плейсхолдеры) ═══════════ -->
+    <div class="marquee" aria-label="Клиенты (плейсхолдеры)">
+      <div class="marquee__track">
+        <!-- набор дублируется в JS для бесшовности -->
+        <span class="marquee__item">Nord&nbsp;Coffee</span>
+        <span class="marquee__item">Атлас&nbsp;Девелопмент</span>
+        <span class="marquee__item">FitLab</span>
+        <span class="marquee__item">Karuna</span>
+        <span class="marquee__item">TechWave</span>
+        <span class="marquee__item">Восток&nbsp;Банк</span>
+        <span class="marquee__item">Silk&nbsp;Route</span>
+        <span class="marquee__item">Дом&nbsp;Культуры</span>
+      </div>
+    </div>
+
+    <!-- ═══════════ 01 / УСЛУГИ ═══════════ -->
+    <section class="section" id="services">
+      <div class="section__head reveal">
+        <span class="section__num">01</span>
+        <h2 class="section__title">Услуги</h2>
+      </div>
+
+      <ul class="services">
+        <li class="service reveal" data-hover>
+          <div class="service__row">
+            <span class="service__index">01</span>
+            <h3 class="service__name">SMM&nbsp;и&nbsp;комьюнити</h3>
+            <span class="service__tag">стратегия · контент · модерация</span>
+          </div>
+          <div class="service__detail">
+            <p>Ведём соцсети как медиа: редакционный план, съёмки, комьюнити-менеджмент и рост вовлечённости, который видно в отчётах.</p>
+            <div class="service__preview service__preview--1" aria-hidden="true"></div>
+          </div>
+        </li>
+        <li class="service reveal" data-hover>
+          <div class="service__row">
+            <span class="service__index">02</span>
+            <h3 class="service__name">Performance&nbsp;и&nbsp;таргет</h3>
+            <span class="service__tag">трафик · лиды · аналитика</span>
+          </div>
+          <div class="service__detail">
+            <p>Таргетированная и контекстная реклама со сквозной аналитикой. Оптимизируем не клики, а стоимость привлечённого клиента.</p>
+            <div class="service__preview service__preview--2" aria-hidden="true"></div>
+          </div>
+        </li>
+        <li class="service reveal" data-hover>
+          <div class="service__row">
+            <span class="service__index">03</span>
+            <h3 class="service__name">SEO-продвижение</h3>
+            <span class="service__tag">семантика · техаудит · контент</span>
+          </div>
+          <div class="service__detail">
+            <p>Выводим сайты в топ выдачи: техническая оптимизация, семантическое ядро и контент, который отвечает на реальные запросы.</p>
+            <div class="service__preview service__preview--3" aria-hidden="true"></div>
+          </div>
+        </li>
+        <li class="service reveal" data-hover>
+          <div class="service__row">
+            <span class="service__index">04</span>
+            <h3 class="service__name">Контент-продакшн</h3>
+            <span class="service__tag">видео · фото · моушн</span>
+          </div>
+          <div class="service__detail">
+            <p>Снимаем и монтируем: имиджевые ролики, продуктовые съёмки, Reels-форматы и моушн-дизайн под площадки бренда.</p>
+            <div class="service__preview service__preview--4" aria-hidden="true"></div>
+          </div>
+        </li>
+        <li class="service reveal" data-hover>
+          <div class="service__row">
+            <span class="service__index">05</span>
+            <h3 class="service__name">Бренд-стратегия</h3>
+            <span class="service__tag">позиционирование · айдентика · tone of voice</span>
+          </div>
+          <div class="service__detail">
+            <p>Исследуем рынок и аудиторию, формулируем позиционирование и голос бренда — фундамент, на котором держится весь маркетинг.</p>
+            <div class="service__preview service__preview--5" aria-hidden="true"></div>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ═══════════ 02 / КЕЙСЫ (bento-сетка, плейсхолдеры) ═══════════ -->
+    <section class="section" id="cases">
+      <div class="section__head reveal">
+        <span class="section__num">02</span>
+        <h2 class="section__title">Кейсы</h2>
+      </div>
+
+      <!--
+        data-video="" — точка подключения превью-видео для hover-to-play.
+        Пока пусто — показывается градиентный плейсхолдер.
+      -->
+      <div class="bento">
+        <a href="#" class="tile tile--a reveal" data-hover data-video="">
+          <div class="tile__media tile__media--1"></div>
+          <video class="tile__video" muted loop playsinline preload="none"></video>
+          <div class="tile__caption">
+            <span class="tile__client">Nord Coffee</span>
+            <span class="tile__work">Ребрендинг и SMM — плейсхолдер</span>
+          </div>
+        </a>
+        <a href="#" class="tile tile--b reveal" data-hover data-video="">
+          <div class="tile__media tile__media--2"></div>
+          <video class="tile__video" muted loop playsinline preload="none"></video>
+          <div class="tile__caption">
+            <span class="tile__client">Атлас Девелопмент</span>
+            <span class="tile__work">Performance-кампания — плейсхолдер</span>
+          </div>
+        </a>
+        <a href="#" class="tile tile--c reveal" data-hover data-video="">
+          <div class="tile__media tile__media--3"></div>
+          <video class="tile__video" muted loop playsinline preload="none"></video>
+          <div class="tile__caption">
+            <span class="tile__client">FitLab</span>
+            <span class="tile__work">Контент-продакшн — плейсхолдер</span>
+          </div>
+        </a>
+        <a href="#" class="tile tile--d reveal" data-hover data-video="">
+          <div class="tile__media tile__media--4"></div>
+          <video class="tile__video" muted loop playsinline preload="none"></video>
+          <div class="tile__caption">
+            <span class="tile__client">Karuna Skincare</span>
+            <span class="tile__work">Запуск бренда — плейсхолдер</span>
+          </div>
+        </a>
+        <a href="#" class="tile tile--e reveal" data-hover data-video="">
+          <div class="tile__media tile__media--5"></div>
+          <video class="tile__video" muted loop playsinline preload="none"></video>
+          <div class="tile__caption">
+            <span class="tile__client">TechWave</span>
+            <span class="tile__work">SEO и контент — плейсхолдер</span>
+          </div>
+        </a>
+        <a href="#" class="tile tile--f reveal" data-hover data-video="">
+          <div class="tile__media tile__media--6"></div>
+          <video class="tile__video" muted loop playsinline preload="none"></video>
+          <div class="tile__caption">
+            <span class="tile__client">Восток Банк</span>
+            <span class="tile__work">Имиджевое видео — плейсхолдер</span>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- ═══════════ 03 / ШОУРИЛ ═══════════ -->
+    <section class="section section--full" id="showreel">
+      <div class="section__head section__head--inset reveal">
+        <span class="section__num">03</span>
+        <h2 class="section__title">Шоурил</h2>
+      </div>
+
+      <div class="showreel reveal" data-hover>
+        <!-- Источник подставляется из SHOWREEL_VIDEO_URL (js/main.js) -->
+        <video class="showreel__video" id="showreel-video" muted loop playsinline preload="metadata"></video>
+        <div class="showreel__fallback" id="showreel-fallback">
+          <span class="showreel__fallback-note">Плейсхолдер — подключите SHOWREEL_VIDEO_URL</span>
+        </div>
+        <button class="showreel__toggle magnetic" id="showreel-toggle" data-hover aria-label="Воспроизвести шоурил">
+          <span class="showreel__toggle-label">Play</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ═══════════ 04 / О НАС ═══════════ -->
+    <section class="section" id="about">
+      <div class="section__head reveal">
+        <span class="section__num">04</span>
+        <h2 class="section__title">О нас</h2>
+      </div>
+
+      <div class="about">
+        <div class="about__text reveal" data-parallax="0.06">
+          <p class="about__lead">Grow Flow — это команда стратегов, продюсеров и аналитиков. Мы не продаём «ведение соцсетей» — мы строим системы, в которых контент, реклама и данные работают на одну цель: рост бизнеса клиента.</p>
+          <p class="about__body">С 2018 года мы помогаем брендам находить свой голос и свою аудиторию. Плейсхолдер-текст: замените на реальную историю агентства, принципы работы и подход.</p>
+        </div>
+
+        <ul class="stats" data-parallax="-0.04">
+          <li class="stat reveal">
+            <span class="stat__value"><span data-count="120">0</span>+</span>
+            <span class="stat__label">реализованных проектов</span>
+          </li>
+          <li class="stat reveal">
+            <span class="stat__value"><span data-count="8">0</span></span>
+            <span class="stat__label">лет на рынке</span>
+          </li>
+          <li class="stat reveal">
+            <span class="stat__value"><span data-count="47">0</span></span>
+            <span class="stat__label">клиентов на постоянном сопровождении</span>
+          </li>
+          <li class="stat reveal">
+            <span class="stat__value">&times;<span data-count="3.4" data-decimals="1">0</span></span>
+            <span class="stat__label">средний рост окупаемости рекламы</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ═══════════ 05 / КОМАНДА (плейсхолдеры) ═══════════ -->
+    <section class="section" id="team">
+      <div class="section__head reveal">
+        <span class="section__num">05</span>
+        <h2 class="section__title">Команда</h2>
+      </div>
+
+      <div class="team">
+        <div class="member member--1 reveal" data-hover data-parallax="0.05">
+          <div class="member__photo member__photo--1"><span>МК</span></div>
+          <div class="member__info">
+            <span class="member__name">Мария Ковалёва</span>
+            <span class="member__role">Основатель, стратег</span>
+          </div>
+        </div>
+        <div class="member member--2 reveal" data-hover data-parallax="-0.03">
+          <div class="member__photo member__photo--2"><span>ДС</span></div>
+          <div class="member__info">
+            <span class="member__name">Дмитрий Соколов</span>
+            <span class="member__role">Креативный директор</span>
+          </div>
+        </div>
+        <div class="member member--3 reveal" data-hover data-parallax="0.08">
+          <div class="member__photo member__photo--3"><span>АЛ</span></div>
+          <div class="member__info">
+            <span class="member__name">Анна Лебедева</span>
+            <span class="member__role">Руководитель SMM</span>
+          </div>
+        </div>
+        <div class="member member--4 reveal" data-hover data-parallax="-0.05">
+          <div class="member__photo member__photo--4"><span>ИВ</span></div>
+          <div class="member__info">
+            <span class="member__name">Игорь Волков</span>
+            <span class="member__role">Head of Performance</span>
+          </div>
+        </div>
+        <div class="member member--5 reveal" data-hover data-parallax="0.04">
+          <div class="member__photo member__photo--5"><span>ЕН</span></div>
+          <div class="member__info">
+            <span class="member__name">Елена Новикова</span>
+            <span class="member__role">Продюсер продакшна</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ 06 / ОТЗЫВЫ (плейсхолдеры) ═══════════ -->
+    <section class="section" id="testimonials">
+      <div class="section__head reveal">
+        <span class="section__num">06</span>
+        <h2 class="section__title">Отзывы</h2>
+      </div>
+
+      <figure class="quote reveal">
+        <span class="quote__mark" aria-hidden="true">&ldquo;</span>
+        <blockquote class="quote__text">За год работы с Grow Flow наши продажи из соцсетей выросли втрое, а бренд впервые заговорил одним голосом на всех площадках. Это не подрядчик — это часть нашей команды.</blockquote>
+        <figcaption class="quote__author">
+          <span class="quote__name">Алексей Морозов</span>
+          <span class="quote__company">CEO, Nord Coffee — плейсхолдер</span>
+        </figcaption>
+      </figure>
+
+      <ul class="reviews">
+        <li class="review reveal">
+          <p class="review__text">Редкий случай, когда отчёты читаешь с удовольствием: всё прозрачно, каждая цифра объяснена. Плейсхолдер-отзыв.</p>
+          <span class="review__author">Ольга Смирнова — директор по маркетингу, FitLab</span>
+        </li>
+        <li class="review reveal">
+          <p class="review__text">Сняли ролик, который вирусился без единого рубля посева. До сих пор не понимаем, как. Плейсхолдер-отзыв.</p>
+          <span class="review__author">Павел Гусев — бренд-менеджер, TechWave</span>
+        </li>
+        <li class="review reveal">
+          <p class="review__text">Пришли за таргетом, остались за стратегией. Команда думает о нашем бизнесе больше, чем некоторые сотрудники. Плейсхолдер-отзыв.</p>
+          <span class="review__author">Наталья Ким — сооснователь, Karuna Skincare</span>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ═══════════ 07 / КОНТАКТЫ ═══════════ -->
+    <section class="section" id="contacts">
+      <div class="section__head reveal">
+        <span class="section__num">07</span>
+        <h2 class="section__title">Контакты</h2>
+      </div>
+
+      <div class="contacts">
+        <div class="contacts__info reveal">
+          <p class="contacts__lead">Расскажите о своей задаче — вернёмся с идеями в течение двух рабочих дней.</p>
+          <a href="mailto:hello@growflow.ru" class="contacts__email link-arrow magnetic" data-hover>hello@growflow.ru <span class="link-arrow__icon">&rarr;</span></a>
+          <div class="contacts__details">
+            <p>+7 (900) 000-00-00 — плейсхолдер</p>
+            <p>Москва, ул. Примерная, 1 — плейсхолдер</p>
+          </div>
+          <div class="contacts__socials">
+            <a href="#" class="magnetic" data-hover>Telegram</a>
+            <a href="#" class="magnetic" data-hover>VK</a>
+            <a href="#" class="magnetic" data-hover>Behance</a>
+          </div>
+        </div>
+
+        <form class="form reveal" id="contact-form" novalidate>
+          <div class="form__field">
+            <label class="form__label" for="f-name">Ваше имя</label>
+            <input class="form__input" type="text" id="f-name" name="name" placeholder="Как к вам обращаться" required>
+          </div>
+          <div class="form__field">
+            <label class="form__label" for="f-email">Email</label>
+            <input class="form__input" type="email" id="f-email" name="email" placeholder="name@company.ru" required>
+          </div>
+          <div class="form__field">
+            <label class="form__label" for="f-message">О проекте</label>
+            <textarea class="form__input form__input--area" id="f-message" name="message" rows="3" placeholder="Пара слов о задаче и сроках"></textarea>
+          </div>
+          <button type="submit" class="form__submit link-arrow magnetic" data-hover>
+            Отправить заявку <span class="link-arrow__icon">&rarr;</span>
+          </button>
+          <p class="form__note" id="form-note" role="status"></p>
+        </form>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ═══════════ ФУТЕР ═══════════ -->
+  <footer class="footer">
+    <span class="footer__copy">©2026 Grow Flow. Все права защищены.</span>
+    <nav class="footer__links">
+      <a href="#services" class="magnetic" data-hover>Услуги</a>
+      <a href="#cases" class="magnetic" data-hover>Кейсы</a>
+      <a href="#about" class="magnetic" data-hover>О нас</a>
+      <a href="#contacts" class="magnetic" data-hover>Контакты</a>
+    </nav>
+    <a href="#hero" class="footer__top magnetic" data-hover>Наверх &uarr;</a>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
