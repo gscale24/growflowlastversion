@@ -37,6 +37,7 @@
     <li data-stop="hero" class="is-active"><span>Начало</span></li>
     <li data-stop="sceneA"><span>Знакомство</span></li>
     <li data-stop="sceneB"><span>Услуги</span></li>
+    <li data-stop="work"><span>Кейсы</span></li>
     <li data-stop="sceneC"><span>Контакты</span></li>
     <li data-stop="outro"><span>Финал</span></li>
   </ul>
@@ -77,33 +78,33 @@
   </div>
 </section>
 
-<!-- ================= SCENE B — ручка раскрывает услуги ================= -->
+<!-- ================= SCENE B — услуги вкладками (FILM/PHOTO-стиль) ================= -->
 <section class="scene scene--services" id="sceneB" style="--frames:45">
   <div class="scene-sticky">
     <canvas id="canvasB" width="480" height="854"></canvas>
     <div class="scene-vignette scene-vignette--left"></div>
 
-    <div class="services-panel">
-      <span class="eyebrow">01 — Услуги</span>
-      <ul class="services-list" id="servicesList">
-        <li class="service-item" data-segment="0" data-service="smm">
-          <span class="service-num">01</span>
-          <span class="service-name">SMM и комьюнити</span>
-        </li>
-        <li class="service-item" data-segment="1" data-service="performance">
-          <span class="service-num">02</span>
-          <span class="service-name">Performance и таргет</span>
-        </li>
-        <li class="service-item" data-segment="2" data-service="seo">
-          <span class="service-num">03</span>
-          <span class="service-name">SEO-продвижение</span>
-        </li>
-        <li class="service-item" data-segment="3" data-service="production">
-          <span class="service-num">04</span>
-          <span class="service-name">Контент-продакшн</span>
-        </li>
-      </ul>
-      <span class="services-hint">Нажмите на услугу, чтобы увидеть состав работ</span>
+    <span class="eyebrow services-eyebrow">01 — Услуги</span>
+
+    <!-- вертикальная навигация-вкладки слева -->
+    <nav class="services-tabs" id="servicesTabs" aria-label="Категории услуг">
+      <button class="services-tab" data-segment="0" data-service="smm" type="button">SMM</button>
+      <button class="services-tab" data-segment="1" data-service="performance" type="button">Таргет</button>
+      <button class="services-tab" data-segment="2" data-service="seo" type="button">SEO</button>
+      <button class="services-tab" data-segment="3" data-service="production" type="button">Продакшн</button>
+    </nav>
+
+    <!-- гигантское слово активной категории -->
+    <div class="services-headline-wrap">
+      <h2 class="services-headline" id="servicesHeadline">SMM</h2>
+    </div>
+
+    <!-- описание + состав работ активной категории -->
+    <div class="services-copy" id="servicesCopy">
+      <p class="services-desc" id="servicesDesc">Строим сообщество вокруг бренда: от контент-плана и визуального языка до ежедневной модерации и роста живой аудитории.</p>
+      <p class="services-tagline">Каждая услуга — законченная система, а не разовая настройка.</p>
+      <ul class="services-scope" id="servicesScope"></ul>
+      <button class="services-more" id="servicesMore" type="button">Подробнее о составе работ <span class="link-arrow-icon">↗</span></button>
     </div>
   </div>
 </section>
@@ -118,6 +119,46 @@
     <ul id="modalScope"></ul>
   </div>
 </div>
+
+<!-- ================= WORK — кейсы с параллаксом ================= -->
+<section class="work" id="work">
+  <span class="work-bg-text" aria-hidden="true">НАШИ<br>РАБОТЫ</span>
+  <span class="eyebrow work-eyebrow">02 — Кейсы</span>
+
+  <div class="work-grid">
+    <!-- плейсхолдер-кейсы: заменить на реальные проекты -->
+    <a href="#" class="work-card" data-speed="0.12">
+      <div class="work-card-media work-card-media--1"></div>
+      <span class="work-card-name">Nord Coffee</span>
+      <span class="work-card-tag">SMM</span>
+    </a>
+    <a href="#" class="work-card" data-speed="-0.08">
+      <div class="work-card-media work-card-media--2"></div>
+      <span class="work-card-name">Reva Studio</span>
+      <span class="work-card-tag">Таргет</span>
+    </a>
+    <a href="#" class="work-card" data-speed="0.18">
+      <div class="work-card-media work-card-media--3"></div>
+      <span class="work-card-name">Alma Clinic</span>
+      <span class="work-card-tag">SEO</span>
+    </a>
+    <a href="#" class="work-card" data-speed="-0.14">
+      <div class="work-card-media work-card-media--4"></div>
+      <span class="work-card-name">Format Wear</span>
+      <span class="work-card-tag">Продакшн</span>
+    </a>
+    <a href="#" class="work-card" data-speed="0.1">
+      <div class="work-card-media work-card-media--5"></div>
+      <span class="work-card-name">Sova Bank</span>
+      <span class="work-card-tag">SMM</span>
+    </a>
+    <a href="#" class="work-card" data-speed="-0.1">
+      <div class="work-card-media work-card-media--6"></div>
+      <span class="work-card-name">Panorama</span>
+      <span class="work-card-tag">Продакшн</span>
+    </a>
+  </div>
+</section>
 
 <!-- ================= SCENE C — заметки + мокап телефона ================= -->
 <section class="scene scene--contact" id="sceneC" style="--frames:50">

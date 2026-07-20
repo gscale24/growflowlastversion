@@ -167,34 +167,68 @@ const scrubA = makeScrubber({
 });
 
 /* ==================================================================
-   SCENE B — ручка + услуги по сегментам
+   SCENE B — услуги вкладками, скролл переключает активную категорию
    ================================================================== */
 const serviceData = {
   smm: {
-    num: '01', title: 'SMM и комьюнити',
+    num: '01', title: 'SMM и комьюнити', word: 'SMM',
     desc: 'Строим сообщество вокруг бренда: от контент-плана и визуального языка до ежедневной модерации и роста живой аудитории.',
     scope: ['Контент-стратегия и рубрикатор', 'Съёмка и дизайн постов', 'Модерация и работа с комьюнити', 'Ежемесячная аналитика вовлечённости']
   },
   performance: {
-    num: '02', title: 'Performance и таргет',
+    num: '02', title: 'Performance и таргет', word: 'Таргет',
     desc: 'Настраиваем связку трафик → лид → продажа и держим её под постоянной оптимизацией по цифрам.',
     scope: ['Настройка рекламных кабинетов', 'A/B тестирование креативов', 'Сквозная аналитика и CRM-интеграция', 'Еженедельная оптимизация ставок']
   },
   seo: {
-    num: '03', title: 'SEO-продвижение',
+    num: '03', title: 'SEO-продвижение', word: 'SEO',
     desc: 'Выводим сайты в топ выдачи: техническая оптимизация, семантическое ядро и контент, который отвечает на реальные запросы.',
     scope: ['Технический аудит и исправления', 'Сбор семантического ядра', 'SEO-контент и внутренняя перелинковка', 'Ежемесячный отчёт по позициям']
   },
   production: {
-    num: '04', title: 'Контент-продакшн',
+    num: '04', title: 'Контент-продакшн', word: 'Продакшн',
     desc: 'Съёмки, монтаж и моушн-дизайн под каждую площадку — от вертикальных reels до имиджевых роликов.',
     scope: ['Сценарий и раскадровка', 'Съёмочный день под ключ', 'Монтаж и цветокоррекция', 'Адаптация под форматы площадок']
   }
 };
 
 const sceneBEl = document.getElementById('sceneB');
-const serviceItems = Array.from(document.querySelectorAll('.service-item'));
-const SEGMENTS = serviceItems.length;
+const serviceTabs = Array.from(document.querySelectorAll('.services-tab'));
+const SEGMENTS = serviceTabs.length;
+const servicesHeadline = document.getElementById('servicesHeadline');
+const servicesDesc = document.getElementById('servicesDesc');
+const servicesScope = document.getElementById('servicesScope');
+const servicesMore = document.getElementById('servicesMore');
+let activeServiceKey = serviceTabs[0].dataset.service;
+
+function renderServiceCopy(key) {
+  const data = serviceData[key];
+  if (!data) return;
+  servicesDesc.textContent = data.desc;
+  servicesScope.innerHTML = '';
+  data.scope.forEach(line => {
+    const li = document.createElement('li');
+    li.textContent = line;
+    servicesScope.appendChild(li);
+  });
+}
+
+function setActiveService(key, segmentIndex) {
+  if (key === activeServiceKey) return;
+  activeServiceKey = key;
+  serviceTabs.forEach((tab, i) => tab.classList.toggle('is-active', i === segmentIndex));
+  servicesHeadline.classList.remove('is-in');
+  requestAnimationFrame(() => {
+    servicesHeadline.textContent = serviceData[key].word;
+    requestAnimationFrame(() => servicesHeadline.classList.add('is-in'));
+  });
+  renderServiceCopy(key);
+}
+// первичная отрисовка
+serviceTabs[0].classList.add('is-active');
+servicesHeadline.textContent = serviceData[activeServiceKey].word;
+servicesHeadline.classList.add('is-in');
+renderServiceCopy(activeServiceKey);
 
 const scrubB = makeScrubber({
   sectionEl: sceneBEl,
@@ -203,26 +237,27 @@ const scrubB = makeScrubber({
   frameFolder: SCENES_META.sceneB.folder,
   onProgress(p) {
     const segment = Math.min(SEGMENTS - 1, Math.floor(p * SEGMENTS));
-    serviceItems.forEach((item, i) => {
-      item.classList.toggle('is-active', i === segment);
-    });
+    setActiveService(serviceTabs[segment].dataset.service, segment);
   }
 });
 
-serviceItems.forEach(item => {
-  item.addEventListener('click', () => openServiceModal(item.dataset.service));
-  item.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openServiceModal(item.dataset.service); }
+// клик по вкладке — плавно скроллит к соответствующему участку сцены
+serviceTabs.forEach((tab, i) => {
+  tab.addEventListener('click', () => {
+    const total = sceneBEl.offsetHeight - window.innerHeight;
+    const targetP = (i + 0.5) / SEGMENTS;
+    window.scrollTo({ top: sceneBEl.offsetTop + total * targetP, behavior: 'smooth' });
   });
-  item.setAttribute('tabindex', '0');
 });
+
+servicesMore.addEventListener('click', () => openServiceModal(activeServiceKey));
 
 // хоткеи 1–4 — быстрый переход к описанию услуги
 window.addEventListener('keydown', (e) => {
   if (!['1', '2', '3', '4'].includes(e.key)) return;
   if (document.activeElement && ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
   const idx = parseInt(e.key, 10) - 1;
-  if (serviceItems[idx]) openServiceModal(serviceItems[idx].dataset.service);
+  if (serviceTabs[idx]) openServiceModal(serviceTabs[idx].dataset.service);
 });
 
 const modal = document.getElementById('serviceModal');
@@ -330,7 +365,7 @@ function updateHero(scrollPos) {
    ================================================================== */
 const progressFill = document.getElementById('progressFill');
 const railStops = Array.from(document.querySelectorAll('.progress-rail-stops li'));
-const stopSections = { hero: heroEl, sceneA: sceneAEl, sceneB: sceneBEl, sceneC: sceneCEl, outro: document.getElementById('outro') };
+const stopSections = { hero: heroEl, sceneA: sceneAEl, sceneB: sceneBEl, work: document.getElementById('work'), sceneC: sceneCEl, outro: document.getElementById('outro') };
 
 function updateProgressRail(scrollPos) {
   const docHeight = document.body.scrollHeight - window.innerHeight;
@@ -342,6 +377,37 @@ function updateProgressRail(scrollPos) {
     if (scrollPos >= el.offsetTop - window.innerHeight * 0.5) activeKey = key;
   });
   railStops.forEach(li => li.classList.toggle('is-active', li.dataset.stop === activeKey));
+}
+
+/* ==================================================================
+   WORK — параллакс карточек кейсов
+   Абсолютная позиция каждой карточки в документе считается один раз
+   (и пересчитывается при resize), чтобы не зависеть от того, что
+   offsetParent карточки — сама позиционированная секция .work.
+   ================================================================== */
+const prefersNoParallax = window.matchMedia('(pointer: coarse)').matches
+  || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const workCards = Array.from(document.querySelectorAll('.work-card')).map(el => ({
+  el, speed: parseFloat(el.dataset.speed) || 0, centerY: 0,
+}));
+function measureWorkCards() {
+  workCards.forEach(c => {
+    const rect = c.el.getBoundingClientRect();
+    c.centerY = rect.top + window.scrollY + rect.height / 2;
+  });
+}
+function updateWorkParallax(scrollPos) {
+  if (prefersNoParallax || !workCards.length) return;
+  const viewportCenter = scrollPos + window.innerHeight / 2;
+  workCards.forEach(c => {
+    const offset = (c.centerY - viewportCenter) * c.speed;
+    c.el.style.transform = `translateY(${offset.toFixed(1)}px)`;
+  });
+}
+if (!prefersNoParallax) {
+  measureWorkCards();
+  window.addEventListener('resize', measureWorkCards);
+  window.addEventListener('load', measureWorkCards);
 }
 
 /* ==================================================================
@@ -369,6 +435,7 @@ function frameTick(now) {
   updateHero(smoothY);
   scrubA.update(smoothY);
   scrubB.update(smoothY);
+  updateWorkParallax(smoothY);
   scrubC.update(smoothY);
   updateProgressRail(smoothY);
 
@@ -398,6 +465,7 @@ if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     updateHero(smoothY);
     scrubA.update(smoothY);
     scrubB.update(smoothY);
+    updateWorkParallax(smoothY);
     scrubC.update(smoothY);
     updateProgressRail(smoothY);
   }, { passive: true });
