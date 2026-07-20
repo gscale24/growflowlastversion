@@ -40,10 +40,11 @@ setTimeout(finishPreloader, 6000);
    внутри секции (0..1) мапится на индекс кадра.
    ================================================================== */
 function makeScrubber({ sectionEl, canvasEl, frameCount, frameFolder, frameDigits = 3, onProgress }) {
-  const ctx = canvasEl.getContext('2d');
+  const ctx = canvasEl.getContext('2d', { alpha: false });
   const images = new Array(frameCount);
   let currentFrame = -1;
   let lastBlendKey = null;
+  let sizedW = 0, sizedH = 0;
 
   function frameSrc(i) {
     const n = String(i + 1).padStart(frameDigits, '0');
@@ -58,6 +59,18 @@ function makeScrubber({ sectionEl, canvasEl, frameCount, frameFolder, frameDigit
     images[i] = img;
   }
 
+  // канвас ресайзится (и очищается) только если размер реально изменился —
+  // назначение canvas.width/height на каждый тик — дорогая операция и
+  // была главной причиной проседания кадров при скролле
+  function ensureSize(img) {
+    if (sizedW !== img.naturalWidth || sizedH !== img.naturalHeight) {
+      sizedW = img.naturalWidth;
+      sizedH = img.naturalHeight;
+      canvasEl.width = sizedW;
+      canvasEl.height = sizedH;
+    }
+  }
+
   // точный кадр без интерполяции — для статичных удержаний (например, во время печати)
   function drawFrame(index) {
     index = Math.max(0, Math.min(frameCount - 1, Math.round(index)));
@@ -66,8 +79,7 @@ function makeScrubber({ sectionEl, canvasEl, frameCount, frameFolder, frameDigit
     if (!img || !img.complete || img.naturalWidth === 0) return;
     currentFrame = index;
     lastBlendKey = null;
-    canvasEl.width = img.naturalWidth;
-    canvasEl.height = img.naturalHeight;
+    ensureSize(img);
     ctx.globalAlpha = 1;
     ctx.drawImage(img, 0, 0);
   }
@@ -85,8 +97,7 @@ function makeScrubber({ sectionEl, canvasEl, frameCount, frameFolder, frameDigit
     if (!imgLo || !imgLo.complete || imgLo.naturalWidth === 0) return;
     lastBlendKey = key;
     currentFrame = lo;
-    canvasEl.width = imgLo.naturalWidth;
-    canvasEl.height = imgLo.naturalHeight;
+    ensureSize(imgLo);
     ctx.globalAlpha = 1;
     ctx.drawImage(imgLo, 0, 0);
     if (frac > 0.008 && hi !== lo) {
@@ -333,18 +344,24 @@ function updateProgressRail(scrollPos) {
 }
 
 /* ==================================================================
-   MAIN SCROLL LOOP — сглаженный скролл (lerp)
+   MAIN SCROLL LOOP — сглаженный скролл (lerp, независимый от FPS)
    Реальная позиция скролла (window.scrollY) плавно "догоняется"
-   виртуальным значением smoothY, которое и управляет кадрами/парал­
-   лаксом. Даёт эффект инерции вместо жёсткой синхронизации 1:1.
+   виртуальным значением smoothY. Коэффициент сглаживания считается по
+   реально прошедшему времени (performance.now), а не за "тик" — иначе
+   при просадке кадров (например, из-за перерисовки канваса) сглаживание
+   само становится источником рывков.
    ================================================================== */
-const SMOOTH_FACTOR = 0.18;
+const SMOOTH_HALFLIFE_MS = 55; // за это время разрыв между smoothY и целью уменьшается вдвое
 let smoothY = window.scrollY;
 let rafRunning = false;
+let lastTickTime = 0;
 
-function frameTick() {
+function frameTick(now) {
+  const dt = lastTickTime ? Math.min(now - lastTickTime, 64) : 16.67;
+  lastTickTime = now;
   const targetY = window.scrollY;
-  smoothY += (targetY - smoothY) * SMOOTH_FACTOR;
+  const factor = 1 - Math.pow(2, -dt / SMOOTH_HALFLIFE_MS);
+  smoothY += (targetY - smoothY) * factor;
   const diff = Math.abs(targetY - smoothY);
   if (diff < 0.4) smoothY = targetY;
 
@@ -363,6 +380,7 @@ function frameTick() {
 function kickScroll() {
   if (!rafRunning) {
     rafRunning = true;
+    lastTickTime = 0;
     requestAnimationFrame(frameTick);
   }
 }
