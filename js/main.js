@@ -5,10 +5,9 @@ const OUTRO_VIDEO_URL = "assets/hero.mp4"; // видео внутри финал
 
 const SCENES_META = {
   sceneA: { frames: 40, folder: 'assets/frames/sceneA' },
-  sceneB: { frames: 45, folder: 'assets/frames/sceneB' },
   sceneC: { frames: 50, folder: 'assets/frames/sceneC' },
 };
-const TOTAL_FRAMES = SCENES_META.sceneA.frames + SCENES_META.sceneB.frames + SCENES_META.sceneC.frames;
+const TOTAL_FRAMES = SCENES_META.sceneA.frames + SCENES_META.sceneC.frames;
 
 /* ==================================================================
    ПРЕЛОАДЕР — агрегированный прогресс по всем кадрам сцен
@@ -193,7 +192,8 @@ const serviceData = {
 };
 
 const sceneBEl = document.getElementById('sceneB');
-const canvasBEl = document.getElementById('canvasB');
+const servicesObjectEl = document.getElementById('servicesObject');
+const servicesObjectWord = document.getElementById('servicesObjectWord');
 const serviceTabs = Array.from(document.querySelectorAll('.services-tab'));
 const SEGMENTS = serviceTabs.length;
 const serviceWords = serviceTabs.map(tab => serviceData[tab.dataset.service].word);
@@ -217,45 +217,84 @@ function renderServiceCopy(key) {
 }
 renderServiceCopy(activeServiceKey);
 serviceTabs[0].classList.add('is-active');
-headlineOut.textContent = serviceWords[0];
-headlineIn.textContent = serviceWords[Math.min(1, SEGMENTS - 1)];
+
+// заголовок теперь занимает только левую половину экрана (справа — объект),
+// поэтому длинные слова вроде «Продакшн» нужно вписывать по ширине —
+// меряем реальную ширину текста на офскрин-канвасе и подбираем кегль
+const headlineWrapEl = document.querySelector('.services-headline-wrap');
+const headlineMeasureCtx = document.createElement('canvas').getContext('2d');
+let headlineFitCache = {};
+function fitHeadlineText(el, word) {
+  if (headlineFitCache[word] === undefined) {
+    const maxWidth = headlineWrapEl.clientWidth;
+    const maxHeight = headlineWrapEl.clientHeight;
+    let size = maxHeight;
+    headlineMeasureCtx.font = `800 ${size}px ${getComputedStyle(el).fontFamily}`;
+    const width = headlineMeasureCtx.measureText(word).width;
+    if (width > 0) size = Math.min(size, size * (maxWidth * 0.86) / width);
+    headlineFitCache[word] = Math.max(28, Math.round(size));
+  }
+  el.textContent = word;
+  el.style.fontSize = headlineFitCache[word] + 'px';
+}
+window.addEventListener('resize', () => { headlineFitCache = {}; });
+// на момент первого замера жирное начертание Inter 800 могло ещё не
+// догрузиться — канвас-измерение тогда идёт по узкому фолбэк-шрифту,
+// и после реальной загрузки шрифта слово перестаёт помещаться;
+// сбрасываем кеш и пересчитываем размеры, когда шрифты точно готовы
+Promise.race([
+  document.fonts ? document.fonts.ready : Promise.resolve(),
+  new Promise(resolve => setTimeout(resolve, 1500)),
+]).then(() => {
+  headlineFitCache = {};
+  fitHeadlineText(headlineOut, headlineOut.textContent);
+  fitHeadlineText(headlineIn, headlineIn.textContent);
+});
+
+fitHeadlineText(headlineOut, serviceWords[0]);
+fitHeadlineText(headlineIn, serviceWords[Math.min(1, SEGMENTS - 1)]);
 
 // плавная кривая ease-in-out для перехода внутри сегмента
 function smoothstep(t) { return t * t * (3 - 2 * t); }
 
-const scrubB = makeScrubber({
-  sectionEl: sceneBEl,
-  canvasEl: canvasBEl,
-  frameCount: SCENES_META.sceneB.frames,
-  frameFolder: SCENES_META.sceneB.folder,
-  onProgress(p) {
-    const segFloat = Math.min(SEGMENTS - 0.0001, Math.max(0, p * SEGMENTS));
-    const segIndex = Math.floor(segFloat);
-    const nextIndex = Math.min(SEGMENTS - 1, segIndex + 1);
-    const frac = smoothstep(segFloat - segIndex);
+function getSectionProgress(sectionEl, scrollPos) {
+  const total = sectionEl.offsetHeight - window.innerHeight;
+  if (total <= 0) return 0;
+  const p = (scrollPos - sectionEl.offsetTop) / total;
+  return Math.max(0, Math.min(1, p));
+}
 
-    // непрерывный "перелистывающий" параллакс гигантского слова —
-    // уходящее слово едет вверх и гаснет, входящее едет снизу навстречу,
-    // оба напрямую следуют за скроллом, без transition и рывков
-    headlineOut.textContent = serviceWords[segIndex];
-    headlineIn.textContent = serviceWords[nextIndex];
-    headlineOut.style.transform = `translateY(${(-frac * 55).toFixed(1)}%)`;
-    headlineOut.style.opacity = String(Math.max(0, 1 - frac * 1.2));
-    headlineIn.style.transform = `translateY(${((1 - frac) * 55).toFixed(1)}%)`;
-    headlineIn.style.opacity = String(frac);
+// без видео-фона сцена больше не нуждается в makeScrubber — прогресс
+// секции считается напрямую и управляет только вкладками/заголовком/объектом
+function updateServicesScene(scrollPos) {
+  const p = getSectionProgress(sceneBEl, scrollPos);
+  const segFloat = Math.min(SEGMENTS - 0.0001, Math.max(0, p * SEGMENTS));
+  const segIndex = Math.floor(segFloat);
+  const nextIndex = Math.min(SEGMENTS - 1, segIndex + 1);
+  const frac = smoothstep(segFloat - segIndex);
 
-    // лёгкий параллакс-дрейф самого кадра видео вслед за перелистыванием
-    const drift = (frac - 0.5) * 26;
-    canvasBEl.style.transform = `translate(calc(-50% + ${drift.toFixed(1)}px), -50%) scale(1.025)`;
+  // непрерывный "перелистывающий" параллакс гигантского слова —
+  // уходящее слово едет вверх и гаснет, входящее едет снизу навстречу,
+  // оба напрямую следуют за скроллом, без transition и рывков
+  fitHeadlineText(headlineOut, serviceWords[segIndex]);
+  fitHeadlineText(headlineIn, serviceWords[nextIndex]);
+  headlineOut.style.transform = `translateY(${(-frac * 55).toFixed(1)}%)`;
+  headlineOut.style.opacity = String(Math.max(0, 1 - frac * 1.2));
+  headlineIn.style.transform = `translateY(${((1 - frac) * 55).toFixed(1)}%)`;
+  headlineIn.style.opacity = String(frac);
 
-    const key = serviceTabs[segIndex].dataset.service;
-    if (key !== activeServiceKey) {
-      activeServiceKey = key;
-      serviceTabs.forEach((tab, i) => tab.classList.toggle('is-active', i === segIndex));
-      renderServiceCopy(key);
-    }
+  // лёгкий наклон предметной карточки вслед за перелистыванием слова
+  const tilt = (frac - 0.5) * 10;
+  servicesObjectEl.style.transform = `translateY(-50%) rotate(${tilt.toFixed(1)}deg)`;
+  servicesObjectWord.textContent = serviceWords[frac < 0.5 ? segIndex : nextIndex];
+
+  const key = serviceTabs[segIndex].dataset.service;
+  if (key !== activeServiceKey) {
+    activeServiceKey = key;
+    serviceTabs.forEach((tab, i) => tab.classList.toggle('is-active', i === segIndex));
+    renderServiceCopy(key);
   }
-});
+}
 
 // клик по вкладке — плавно скроллит к соответствующему участку сцены
 serviceTabs.forEach((tab, i) => {
@@ -419,7 +458,7 @@ function frameTick(now) {
 
   updateHero(smoothY);
   scrubA.update(smoothY);
-  scrubB.update(smoothY);
+  updateServicesScene(smoothY);
   scrubC.update(smoothY);
   updateProgressRail(smoothY);
 
@@ -448,7 +487,7 @@ if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     smoothY = window.scrollY;
     updateHero(smoothY);
     scrubA.update(smoothY);
-    scrubB.update(smoothY);
+    updateServicesScene(smoothY);
     scrubC.update(smoothY);
     updateProgressRail(smoothY);
   }, { passive: true });

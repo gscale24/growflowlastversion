@@ -8,17 +8,19 @@
 <link rel="icon" type="image/png" href="assets/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
 <!--
   ═══════════════════════════════════════════════════════════
-  ВНИМАНИЕ: кадры сцен A/B/C и hero-видео — временная референсная
+  ВНИМАНИЕ: кадры сцен A/C и hero-видео — временная референсная
   съёмка для обкатки scroll-scrubbing механики (см. README).
   Заменить на финальные материалы перед публикацией:
-  assets/frames/sceneA (40), sceneB (45), sceneC (50), assets/hero.mp4.
+  assets/frames/sceneA (40), sceneC (50), assets/hero.mp4.
+  Сцена B («Услуги») — белый экран без видео, объект справа —
+  плейсхолдер под предметную съёмку (см. .services-object).
   Сцена C — телефон-мокап поверх кадров, имитация до реальной съёмки.
   ═══════════════════════════════════════════════════════════
 -->
@@ -77,36 +79,58 @@
   </div>
 </section>
 
-<!-- ================= SCENE B — услуги вкладками (FILM/PHOTO-стиль) ================= -->
-<section class="scene scene--services" id="sceneB" style="--frames:45">
+<!-- ================= SCENE B — услуги: белый экран, чёрный текст
+     (по образцу секции SERVICES на kookie-kollective.com — разрыв палитры
+     посреди тёмного сайта, без видео-фона) ================= -->
+<section class="scene scene--services" id="sceneB">
   <div class="scene-sticky">
-    <canvas id="canvasB" width="480" height="854"></canvas>
-    <div class="scene-vignette scene-vignette--left"></div>
+    <div class="services-frame">
 
-    <span class="eyebrow services-eyebrow">01 — Услуги</span>
+      <div class="services-topbar">
+        <span class="services-index">01<i></i>Услуги</span>
+        <span class="services-brand">Grow Flow<b>+</b></span>
+      </div>
 
-    <!-- вертикальная навигация-вкладки слева -->
-    <nav class="services-tabs" id="servicesTabs" aria-label="Категории услуг">
-      <button class="services-tab" data-segment="0" data-service="smm" type="button">SMM</button>
-      <button class="services-tab" data-segment="1" data-service="performance" type="button">Таргет</button>
-      <button class="services-tab" data-segment="2" data-service="seo" type="button">SEO</button>
-      <button class="services-tab" data-segment="3" data-service="production" type="button">Продакшн</button>
-    </nav>
+      <!-- вертикальная навигация-вкладки слева; активная получает скобки [ ] через CSS -->
+      <nav class="services-tabs" id="servicesTabs" aria-label="Категории услуг">
+        <button class="services-tab" data-segment="0" data-service="smm" type="button">SMM</button>
+        <button class="services-tab" data-segment="1" data-service="performance" type="button">Таргет</button>
+        <button class="services-tab" data-segment="2" data-service="seo" type="button">SEO</button>
+        <button class="services-tab" data-segment="3" data-service="production" type="button">Продакшн</button>
+      </nav>
 
-    <!-- гигантское слово активной категории: непрерывный параллакс-переход,
-         привязанный к скроллу — «уходящее» слово и «входящее» едут
-         навстречу друг другу вместо мгновенной подмены -->
-    <div class="services-headline-wrap">
-      <h2 class="services-headline services-headline--out" id="servicesHeadlineOut">SMM</h2>
-      <h2 class="services-headline services-headline--in" id="servicesHeadlineIn">Таргет</h2>
-    </div>
+      <!-- гигантское слово активной категории: непрерывный параллакс-переход,
+           привязанный к скроллу — «уходящее» слово и «входящее» едут
+           навстречу друг другу вместо мгновенной подмены -->
+      <div class="services-headline-wrap">
+        <h2 class="services-headline services-headline--out" id="servicesHeadlineOut">SMM</h2>
+        <h2 class="services-headline services-headline--in" id="servicesHeadlineIn">Таргет</h2>
+      </div>
 
-    <!-- описание + состав работ активной категории -->
-    <div class="services-copy" id="servicesCopy">
-      <p class="services-desc" id="servicesDesc">Строим сообщество вокруг бренда: от контент-плана и визуального языка до ежедневной модерации и роста живой аудитории.</p>
-      <p class="services-tagline">Каждая услуга — законченная система, а не разовая настройка.</p>
-      <ul class="services-scope" id="servicesScope"></ul>
-      <button class="services-more" id="servicesMore" type="button">Подробнее о составе работ <span class="link-arrow-icon">↗</span></button>
+      <!-- описание + состав работ активной категории -->
+      <div class="services-copy" id="servicesCopy">
+        <p class="services-desc" id="servicesDesc">Строим сообщество вокруг бренда: от контент-плана и визуального языка до ежедневной модерации и роста живой аудитории.</p>
+        <p class="services-tagline">Каждая услуга — законченная система, а не разовая настройка.</p>
+        <ul class="services-scope" id="servicesScope"></ul>
+        <button class="services-more" id="servicesMore" type="button">Подробнее о составе работ <span class="link-arrow-icon">↗</span></button>
+      </div>
+
+      <!-- предметный объект справа: честный плейсхолдер вместо видео —
+           заменить на реальную предметную съёмку -->
+      <div class="services-object" id="servicesObject" aria-hidden="true">
+        <div class="services-object-card">
+          <span class="services-object-logo">GF</span>
+          <span class="services-object-line"></span>
+          <span class="services-object-word" id="servicesObjectWord">SMM</span>
+        </div>
+        <span class="services-object-tag">Место для предметной съёмки</span>
+      </div>
+
+      <div class="services-bottombar">
+        <span class="services-hint">Скролль, чтобы листать услуги</span>
+        <span class="services-rec"><i></i>REC</span>
+      </div>
+
     </div>
   </div>
 </section>
