@@ -1,6 +1,7 @@
 /* ============ ТОЧКИ ПОДКЛЮЧЕНИЯ МЕДИА ============
    Подставьте свои файлы. Кадры сцен — assets/frames/sceneX/f_NNN.jpg. */
 const HERO_VIDEO_URL = "assets/hero.mp4";
+const OUTRO_VIDEO_URL = "assets/hero.mp4"; // видео внутри финальной надписи — можно указать своё
 
 const SCENES_META = {
   sceneA: { frames: 40, folder: 'assets/frames/sceneA' },
@@ -329,7 +330,7 @@ function updateHero(scrollPos) {
    ================================================================== */
 const progressFill = document.getElementById('progressFill');
 const railStops = Array.from(document.querySelectorAll('.progress-rail-stops li'));
-const stopSections = { hero: heroEl, sceneA: sceneAEl, sceneB: sceneBEl, sceneC: sceneCEl };
+const stopSections = { hero: heroEl, sceneA: sceneAEl, sceneB: sceneBEl, sceneC: sceneCEl, outro: document.getElementById('outro') };
 
 function updateProgressRail(scrollPos) {
   const docHeight = document.body.scrollHeight - window.innerHeight;
@@ -401,3 +402,104 @@ if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     updateProgressRail(smoothY);
   }, { passive: true });
 }
+
+/* ==================================================================
+   OUTRO — гигантская надпись «GROW FLOW» с видео в маске букв
+   (destination-in: рисуем кадр видео, затем "вырезаем" его текстом).
+   Рисуем только пока секция видна — вне вьюпорта цикл остановлен.
+   ================================================================== */
+(function initOutro() {
+  const section = document.getElementById('outro');
+  const video = document.getElementById('outroVideo');
+  const canvas = document.getElementById('outroCanvas');
+  const fallbackText = document.querySelector('.outro-fallback-text');
+  const ctx = canvas.getContext('2d');
+  let active = false;
+  let rafId = null;
+  let videoReady = false;
+
+  function useFallback() {
+    canvas.style.display = 'none';
+    fallbackText.style.display = 'block';
+  }
+
+  if (!OUTRO_VIDEO_URL) {
+    useFallback();
+    return;
+  }
+  video.src = OUTRO_VIDEO_URL;
+  video.addEventListener('error', useFallback);
+  video.addEventListener('loadeddata', () => { videoReady = true; });
+  video.play().catch(() => {});
+
+  // офскрин-канвас с маской: обе строки текста рисуются сюда обычным
+  // source-over (объединяются), а затем одной операцией destination-in
+  // накладываются на видео — так деструктив-in не "пересекает" два
+  // непересекающихся textFill друг с другом, а честно объединяет их
+  const maskCanvas = document.createElement('canvas');
+  const maskCtx = maskCanvas.getContext('2d');
+  let maskW = 0, maskH = 0;
+
+  function sizeCanvas() {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const w = canvas.clientWidth || section.clientWidth * 0.8;
+    const h = canvas.clientHeight || section.clientHeight * 0.55;
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    maskW = maskCanvas.width = canvas.width;
+    maskH = maskCanvas.height = canvas.height;
+
+    maskCtx.clearRect(0, 0, maskW, maskH);
+    maskCtx.fillStyle = '#fff';
+    maskCtx.textAlign = 'center';
+    maskCtx.textBaseline = 'middle';
+    const fontSize = maskH * 0.36;
+    maskCtx.font = `600 ${fontSize}px "Playfair Display", Georgia, serif`;
+    maskCtx.fillText('GROW', maskW / 2, maskH * 0.3);
+    maskCtx.fillText('FLOW', maskW / 2, maskH * 0.72);
+  }
+
+  function drawMaskedFrame() {
+    if (!videoReady || video.videoWidth === 0) { if (active) rafId = requestAnimationFrame(drawMaskedFrame); return; }
+    const w = canvas.width, h = canvas.height;
+
+    // 1) кадр видео, вписанный в канвас по типу cover
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.clearRect(0, 0, w, h);
+    const vRatio = video.videoWidth / video.videoHeight;
+    const cRatio = w / h;
+    let dw, dh, dx, dy;
+    if (vRatio > cRatio) { dh = h; dw = h * vRatio; dx = (w - dw) / 2; dy = 0; }
+    else { dw = w; dh = w / vRatio; dx = 0; dy = (h - dh) / 2; }
+    ctx.drawImage(video, dx, dy, dw, dh);
+
+    // 2) вырезаем готовой маской (обе строки уже объединены на ней)
+    ctx.globalCompositeOperation = 'destination-in';
+    ctx.drawImage(maskCanvas, 0, 0, maskW, maskH);
+    ctx.globalCompositeOperation = 'source-over';
+
+    if (active) rafId = requestAnimationFrame(drawMaskedFrame);
+  }
+
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        canvas.classList.add('is-visible');
+        if (!active) {
+          active = true;
+          // не блокируемся навечно, если шрифт почему-то не подгрузится
+          Promise.race([
+            document.fonts.ready,
+            new Promise((resolve) => setTimeout(resolve, 1500)),
+          ]).then(() => { if (active) { sizeCanvas(); drawMaskedFrame(); } });
+        }
+      } else {
+        active = false;
+        if (rafId) cancelAnimationFrame(rafId);
+      }
+    });
+  }, { threshold: 0.15 });
+  io.observe(section);
+
+  window.addEventListener('resize', () => { if (active) sizeCanvas(); });
+})();
