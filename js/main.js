@@ -43,6 +43,7 @@ function makeScrubber({ sectionEl, canvasEl, frameCount, frameFolder, frameDigit
   const ctx = canvasEl.getContext('2d');
   const images = new Array(frameCount);
   let currentFrame = -1;
+  let lastBlendKey = null;
 
   function frameSrc(i) {
     const n = String(i + 1).padStart(frameDigits, '0');
@@ -57,15 +58,45 @@ function makeScrubber({ sectionEl, canvasEl, frameCount, frameFolder, frameDigit
     images[i] = img;
   }
 
+  // точный кадр без интерполяции — для статичных удержаний (например, во время печати)
   function drawFrame(index) {
-    index = Math.max(0, Math.min(frameCount - 1, index));
-    if (index === currentFrame) return;
+    index = Math.max(0, Math.min(frameCount - 1, Math.round(index)));
+    if (index === currentFrame && lastBlendKey === null) return;
     const img = images[index];
     if (!img || !img.complete || img.naturalWidth === 0) return;
     currentFrame = index;
+    lastBlendKey = null;
     canvasEl.width = img.naturalWidth;
     canvasEl.height = img.naturalHeight;
+    ctx.globalAlpha = 1;
     ctx.drawImage(img, 0, 0);
+  }
+
+  // дробный индекс кадра — рисует соседний кадр поверх текущего с альфой
+  // по дробной части, сглаживая переход между дискретными JPEG-кадрами
+  function drawFrameBlended(floatIndex) {
+    floatIndex = Math.max(0, Math.min(frameCount - 1, floatIndex));
+    const lo = Math.floor(floatIndex);
+    const hi = Math.min(frameCount - 1, lo + 1);
+    const frac = floatIndex - lo;
+    const key = lo + '_' + frac.toFixed(3);
+    if (key === lastBlendKey) return;
+    const imgLo = images[lo];
+    if (!imgLo || !imgLo.complete || imgLo.naturalWidth === 0) return;
+    lastBlendKey = key;
+    currentFrame = lo;
+    canvasEl.width = imgLo.naturalWidth;
+    canvasEl.height = imgLo.naturalHeight;
+    ctx.globalAlpha = 1;
+    ctx.drawImage(imgLo, 0, 0);
+    if (frac > 0.008 && hi !== lo) {
+      const imgHi = images[hi];
+      if (imgHi && imgHi.complete && imgHi.naturalWidth > 0) {
+        ctx.globalAlpha = frac;
+        ctx.drawImage(imgHi, 0, 0);
+        ctx.globalAlpha = 1;
+      }
+    }
   }
 
   function getProgress(scrollPos) {
@@ -77,13 +108,13 @@ function makeScrubber({ sectionEl, canvasEl, frameCount, frameFolder, frameDigit
 
   function update(scrollPos) {
     const p = getProgress(scrollPos);
-    const frameIndex = Math.floor(p * (frameCount - 1));
-    drawFrame(frameIndex);
-    if (onProgress) onProgress(p, frameIndex);
+    const floatIndex = p * (frameCount - 1);
+    drawFrameBlended(floatIndex);
+    if (onProgress) onProgress(p, Math.round(floatIndex));
     return p;
   }
 
-  return { update, drawFrame, getProgress, frameCount };
+  return { update, drawFrame, drawFrameBlended, getProgress, frameCount };
 }
 
 /* ==================================================================
@@ -227,7 +258,7 @@ const scrubC = makeScrubber({
     phoneMock.classList.toggle('is-visible', typingPhase);
     if (!typingPhase) {
       const raiseP = Math.min(1, p / 0.68);
-      scrubC.drawFrame(Math.floor(raiseP * (RAISE_FRAMES - 1)));
+      scrubC.drawFrameBlended(raiseP * (RAISE_FRAMES - 1));
     } else {
       scrubC.drawFrame(SETTLE_FRAME);
     }
@@ -307,7 +338,7 @@ function updateProgressRail(scrollPos) {
    виртуальным значением smoothY, которое и управляет кадрами/парал­
    лаксом. Даёт эффект инерции вместо жёсткой синхронизации 1:1.
    ================================================================== */
-const SMOOTH_FACTOR = 0.11;
+const SMOOTH_FACTOR = 0.18;
 let smoothY = window.scrollY;
 let rafRunning = false;
 
