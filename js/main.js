@@ -92,6 +92,20 @@ function makeCoverScrubber({ sectionEl, canvasEl, frameCount, frameFolder, frame
     ctx.drawImage(img, (sizedW - dw) / 2, (sizedH - dh) / 2, dw, dh);
   }
 
+  // референсная съёмка на исходнике на середине секвенции уезжает в
+  // зелёный (смена света в самом ролике) — накладываем синий тон через
+  // composite-режим 'color' (берёт оттенок/насыщенность заливки, яркость
+  // оставляет от кадра), чтобы весь скролл читался одним и тем же синим
+  // светом, а не скакал по цвету вместе с исходником
+  function applyColorGrade() {
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'color';
+    ctx.fillStyle = '#4a86c2';
+    ctx.fillRect(0, 0, sizedW, sizedH);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
   function drawFrame(index) {
     index = Math.max(0, Math.min(frameCount - 1, Math.round(index)));
     const img = images[index];
@@ -100,7 +114,7 @@ function makeCoverScrubber({ sectionEl, canvasEl, frameCount, frameFolder, frame
     currentFrame = index; lastBlendKey = null;
     ctx.clearRect(0, 0, sizedW, sizedH);
     drawCover(img, 1);
-    ctx.globalAlpha = 1;
+    applyColorGrade();
   }
 
   function drawFrameBlended(floatIndex) {
@@ -120,7 +134,7 @@ function makeCoverScrubber({ sectionEl, canvasEl, frameCount, frameFolder, frame
       const imgHi = images[hi];
       if (imgHi && imgHi.complete && imgHi.naturalWidth > 0) drawCover(imgHi, frac);
     }
-    ctx.globalAlpha = 1;
+    applyColorGrade();
   }
 
   function getProgress(scrollPos) {
