@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Grow Flow — маркетинговое агентство полного цикла</title>
-<meta name="description" content="Grow Flow — маркетинговое агентство полного цикла. SMM, performance-маркетинг, SEO, контент-продакшн, бренд-стратегия.">
+<meta name="description" content="Grow Flow — маркетинговое агентство полного цикла. SMM, performance-маркетинг, SEO, контент-продакшн.">
 <link rel="icon" type="image/png" href="assets/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,223 +13,154 @@
 </head>
 <body>
 
-<!-- ИНТРО-ДИАФРАГМА -->
-<div class="iris" id="iris"><div class="iris-circle"></div></div>
+<!--
+  ═══════════════════════════════════════════════════════════
+  ВНИМАНИЕ: кадры сцен A/B/C и hero-видео — временная референсная
+  съёмка для обкатки scroll-scrubbing механики (см. README).
+  Заменить на финальные материалы перед публикацией:
+  assets/frames/sceneA (40), sceneB (45), sceneC (50), assets/hero.mp4.
+  Сцена C — телефон-мокап поверх кадров, имитация до реальной съёмки.
+  ═══════════════════════════════════════════════════════════
+-->
 
-<!-- КАСТОМНЫЙ КУРСОР -->
-<div class="cursor-dot" id="cursorDot"></div>
+<!-- ================= ПРЕЛОАДЕР ================= -->
+<div class="preloader" id="preloader">
+  <span class="preloader-mark">Grow Flow</span>
+  <div class="preloader-bar"><div class="preloader-fill" id="preloaderFill"></div></div>
+  <span class="preloader-pct" id="preloaderPct">0%</span>
+</div>
 
-<!-- ХЕДЕР -->
-<header class="site-header">
-  <a href="#" class="logo">
-    <img class="logo-mark" src="assets/logo-mark.png" alt="" width="26" height="26">
-    <span>Grow Flow<sup>°</sup></span>
-  </a>
-  <nav class="main-nav">
-    <a href="#cases" data-hover>Кейсы</a>
-    <a href="#contact" data-hover>Связаться</a>
-  </nav>
-</header>
+<!-- ================= ИНДИКАТОР ПРОГРЕССА ================= -->
+<nav class="progress-rail" id="progressRail" aria-label="Прогресс по странице">
+  <div class="progress-rail-track"><div class="progress-rail-fill" id="progressFill"></div></div>
+  <ul class="progress-rail-stops">
+    <li data-stop="hero" class="is-active"><span>Начало</span></li>
+    <li data-stop="sceneA"><span>Знакомство</span></li>
+    <li data-stop="sceneB"><span>Услуги</span></li>
+    <li data-stop="sceneC"><span>Контакты</span></li>
+  </ul>
+</nav>
 
-<!-- HERO -->
+<!-- ================= HERO ================= -->
 <section class="hero" id="hero">
-  <div class="hero-bg" data-speed="0.35">
-    <video class="hero-video" id="heroVideo" autoplay muted loop playsinline aria-hidden="true"></video>
-    <div class="hero-gradient"></div>
-    <div class="hero-noise"></div>
+  <video class="hero-video" autoplay muted loop playsinline id="heroVideo"></video>
+  <div class="hero-fallback" id="heroFallback"></div>
+  <div class="hero-overlay"></div>
+  <div class="hero-logo">
+    <img class="hero-logo-mark" src="assets/logo-mark.png" alt="Grow Flow" width="64" height="64">
+    <h1>Grow Flow<sup>°</sup></h1>
+    <span class="hero-logo-sub">маркетинговое агентство полного цикла</span>
   </div>
-  <div class="hero-topline">
-    <span class="status"><i class="dot"></i>Доступны для проектов</span>
-    <span class="tz">Москва / UTC+3</span>
-  </div>
-  <div class="hero-content">
-    <span class="eyebrow reveal-up">Маркетинговое агентство полного цикла</span>
-    <h1 class="hero-title">
-      <span class="line reveal-up" style="--d:1">Мы выращиваем</span>
-      <span class="line reveal-up" style="--d:2"><em>бренды</em>,</span>
-      <span class="line reveal-up" style="--d:3">а не охваты</span>
-    </h1>
-    <a href="#services" class="hero-cta reveal-up" style="--d:4" data-hover>Смотреть, что мы умеем <span class="arrow">→</span></a>
-  </div>
-  <div class="hero-bottom">
-    <span class="scroll-hint">
-      <span class="scroll-line"><span class="scroll-fill"></span></span>
-      Скролл
-    </span>
-    <span class="hero-foot-l">©2026 Grow Flow</span>
-    <span class="hero-foot-r">Маркетинг · Продакшн</span>
+  <div class="hero-scroll-cue">
+    <span>Скролль</span>
+    <div class="cue-line"><i></i></div>
   </div>
 </section>
 
-<!-- УСЛУГИ -->
-<section class="services" id="services">
-  <div class="services-sticky">
-    <span class="num">01</span>
-    <h2 class="section-title">Услуги</h2>
-    <p class="section-sub">Пять дисциплин. Одна система роста.</p>
-  </div>
+<!-- ================= SCENE A — посадка в кресло ================= -->
+<section class="scene" id="sceneA" style="--frames:40">
+  <div class="scene-sticky">
+    <canvas id="canvasA" width="480" height="854"></canvas>
+    <div class="scene-vignette"></div>
 
-  <div class="services-list">
-    <article class="service-row reveal-up" data-index="01">
-      <div class="service-row-top">
-        <h3>SMM и комьюнити</h3>
-        <span class="tags">Стратегия · Контент · Модерация</span>
-      </div>
-      <p class="service-desc">Строим сообщество вокруг бренда: от контент-плана и визуального языка до ежедневной модерации и роста живой аудитории.</p>
-    </article>
-
-    <article class="service-row reveal-up" data-index="02">
-      <div class="service-row-top">
-        <h3>Performance и таргет</h3>
-        <span class="tags">Трафик · Лиды · Аналитика</span>
-      </div>
-      <p class="service-desc">Настраиваем связку трафик → лид → продажа и держим её под постоянной оптимизацией по цифрам, а не по ощущениям.</p>
-    </article>
-
-    <article class="service-row reveal-up" data-index="03">
-      <div class="service-row-top">
-        <h3>SEO-продвижение</h3>
-        <span class="tags">Семантика · Техаудит · Контент</span>
-      </div>
-      <p class="service-desc">Выводим сайты в топ выдачи: техническая оптимизация, семантическое ядро и контент, который отвечает на реальные запросы.</p>
-    </article>
-
-    <article class="service-row reveal-up" data-index="04">
-      <div class="service-row-top">
-        <h3>Контент-продакшн</h3>
-        <span class="tags">Видео · Фото · Моушн</span>
-      </div>
-      <p class="service-desc">Съёмки, монтаж и моушн-дизайн под каждую площадку — от вертикальных reels до имиджевых роликов.</p>
-    </article>
-
-    <article class="service-row reveal-up" data-index="05">
-      <div class="service-row-top">
-        <h3>Бренд-стратегия</h3>
-        <span class="tags">Позиционирование · Айдентика · Tone of voice</span>
-      </div>
-      <p class="service-desc">Формулируем, чем бренд отличается от других, и переводим это в язык, визуал и поведение на всех точках контакта.</p>
-    </article>
-  </div>
-</section>
-
-<!-- КЕЙСЫ (горизонтальный скролл) -->
-<section class="cases" id="cases">
-  <div class="cases-pin">
-    <div class="cases-head">
-      <span class="num">02</span>
-      <h2 class="section-title">Кейсы</h2>
+    <div class="scene-copy scene-copy--A" data-reveal-from="0.55" data-reveal-to="0.85">
+      <span class="eyebrow">Как всё начиналось</span>
+      <h2>Мы садимся за стол так же, как и вы —<br>с чистого листа и списком дел, который никогда не кончается</h2>
+      <p>Grow Flow — команда стратегов, продюсеров и аналитиков. Мы не продаём «ведение соцсетей» — мы строим системы роста.</p>
     </div>
-    <div class="cases-track" id="casesTrack">
-      <article class="case-card case-card--big">
-        <div class="case-media"></div>
-        <div class="case-info">
-          <h3>Nord Coffee</h3>
-          <span>Ребрендинг и SMM</span>
+
+    <div class="scroll-more" data-show-after="0.9">
+      <span>Листай дальше, чтобы мы рассказали больше о нашей работе</span>
+      <div class="scroll-more-arrow">↓</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SCENE B — ручка раскрывает услуги ================= -->
+<section class="scene scene--services" id="sceneB" style="--frames:45">
+  <div class="scene-sticky">
+    <canvas id="canvasB" width="480" height="854"></canvas>
+    <div class="scene-vignette scene-vignette--left"></div>
+
+    <div class="services-panel">
+      <span class="eyebrow">01 — Услуги</span>
+      <ul class="services-list" id="servicesList">
+        <li class="service-item" data-segment="0" data-service="smm">
+          <span class="service-num">01</span>
+          <span class="service-name">SMM и комьюнити</span>
+        </li>
+        <li class="service-item" data-segment="1" data-service="performance">
+          <span class="service-num">02</span>
+          <span class="service-name">Performance и таргет</span>
+        </li>
+        <li class="service-item" data-segment="2" data-service="seo">
+          <span class="service-num">03</span>
+          <span class="service-name">SEO-продвижение</span>
+        </li>
+        <li class="service-item" data-segment="3" data-service="production">
+          <span class="service-num">04</span>
+          <span class="service-name">Контент-продакшн</span>
+        </li>
+      </ul>
+      <span class="services-hint">Нажмите на услугу, чтобы увидеть состав работ</span>
+    </div>
+  </div>
+</section>
+
+<!-- модалка деталей услуги -->
+<div class="service-modal" id="serviceModal">
+  <div class="service-modal-inner">
+    <button class="service-modal-close" id="modalClose">Закрыть ✕</button>
+    <span class="service-modal-num" id="modalNum">01</span>
+    <h3 id="modalTitle">SMM и комьюнити</h3>
+    <p id="modalDesc">Описание.</p>
+    <ul id="modalScope"></ul>
+  </div>
+</div>
+
+<!-- ================= SCENE C — заметки + мокап телефона ================= -->
+<section class="scene scene--contact" id="sceneC" style="--frames:50">
+  <div class="scene-sticky">
+    <canvas id="canvasC" width="480" height="854"></canvas>
+    <div class="scene-vignette"></div>
+
+    <!-- концепт-мокап телефона: живой текст поверх кадра, синхронный с полями формы -->
+    <div class="phone-mock" id="phoneMock" aria-hidden="true">
+      <span class="phone-mock-tag">Концепт · заменить на съёмку</span>
+      <div class="phone-mock-body">
+        <div class="phone-mock-notch"></div>
+        <div class="phone-mock-screen">
+          <span class="phone-mock-label" id="phoneMockLabel">Как к вам обращаться</span>
+          <p class="phone-mock-text" id="phoneMockText"><span class="phone-mock-cursor">|</span></p>
         </div>
-      </article>
-      <article class="case-card">
-        <div class="case-media"></div>
-        <div class="case-info"><h3>Reva Studio</h3><span>Performance-маркетинг</span></div>
-      </article>
-      <article class="case-card">
-        <div class="case-media"></div>
-        <div class="case-info"><h3>Alma Clinic</h3><span>SEO и контент</span></div>
-      </article>
-      <article class="case-card case-card--big">
-        <div class="case-media"></div>
-        <div class="case-info"><h3>Format Wear</h3><span>Продакшн и запуск</span></div>
-      </article>
-      <article class="case-card">
-        <div class="case-media"></div>
-        <div class="case-info"><h3>Sova Bank</h3><span>Бренд-стратегия</span></div>
-      </article>
-      <article class="case-card">
-        <div class="case-media"></div>
-        <div class="case-info"><h3>Panorama</h3><span>Комьюнити-менеджмент</span></div>
-      </article>
+      </div>
+    </div>
+
+    <div class="contact-panel">
+      <span class="eyebrow">Обсудить проект</span>
+      <h2>Напишите нам — мы прочитаем и ответим быстро</h2>
+
+      <form class="contact-form" id="contactForm" autocomplete="off" novalidate>
+        <label>
+          <span>Имя</span>
+          <input type="text" id="fieldName" placeholder="Как к вам обращаться">
+        </label>
+        <label>
+          <span>Что нужно сделать</span>
+          <textarea id="fieldMessage" rows="3" placeholder="Коротко опишите задачу"></textarea>
+        </label>
+        <button type="submit" class="contact-submit" id="contactSubmit">
+          <span class="submit-label">Отправить заявку</span>
+          <span class="submit-sending">Отправляется…</span>
+        </button>
+      </form>
     </div>
   </div>
 </section>
 
-<!-- О НАС -->
-<section class="about" id="about">
-  <div class="about-head">
-    <span class="num">03</span>
-    <h2 class="section-title">О нас</h2>
-  </div>
-  <div class="about-grid">
-    <div class="about-text">
-      <p class="reveal-up">Grow Flow — это команда стратегов, продюсеров и аналитиков. Мы не продаём «ведение соцсетей» — мы строим системы, в которых контент, реклама и данные работают на одну цель: рост бизнеса клиента.</p>
-      <p class="reveal-up about-text-secondary">С 2018 года мы помогаем брендам находить свой голос и свою аудиторию — и отвечаем за результат цифрами, а не отчётами о лайках.</p>
-    </div>
-    <div class="about-stats">
-      <div class="stat reveal-up">
-        <span class="stat-num" data-count="120" data-suffix="+">0</span>
-        <span class="stat-label">реализованных проектов</span>
-      </div>
-      <div class="stat reveal-up">
-        <span class="stat-num" data-count="8">0</span>
-        <span class="stat-label">лет на рынке</span>
-      </div>
-      <div class="stat reveal-up">
-        <span class="stat-num" data-count="47">0</span>
-        <span class="stat-label">клиентов на постоянном сопровождении</span>
-      </div>
-      <div class="stat reveal-up">
-        <span class="stat-num" data-count="3.4" data-prefix="×" data-decimal="1">0</span>
-        <span class="stat-label">средний рост окупаемости рекламы</span>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- КОМАНДА -->
-<section class="team" id="team">
-  <span class="num">04</span>
-  <h2 class="section-title">Команда</h2>
-  <div class="team-row">
-    <div class="team-avatar reveal-up"><span>МК</span></div>
-    <div class="team-avatar reveal-up"><span>ДС</span></div>
-    <div class="team-avatar team-avatar--big reveal-up"><span>АЛ</span></div>
-    <div class="team-avatar reveal-up"><span>ИВ</span></div>
-    <div class="team-avatar reveal-up"><span>ЕН</span></div>
-  </div>
-</section>
-
-<!-- ОТЗЫВЫ -->
-<section class="testimonial" id="testimonial">
-  <span class="num">05</span>
-  <h2 class="section-title">Отзывы</h2>
-  <div class="quote-wrap reveal-up">
-    <span class="quote-mark">“</span>
-    <p class="quote-text">За год работы с Grow Flow наши продажи из соцсетей выросли втрое, а бренд впервые заговорил одним голосом на всех площадках. Это не подрядчик — это часть нашей команды.</p>
-    <div class="quote-author">
-      <span class="author-name">Алексей Морозов</span>
-      <span class="author-role">CEO, Nord Coffee</span>
-    </div>
-  </div>
-</section>
-
-<!-- ФИНАЛЬНЫЙ CTA С ДИНАМИЧНЫМ ФОНОМ -->
-<section class="finale" id="contact">
-  <canvas class="finale-canvas" id="finaleCanvas"></canvas>
-  <div class="finale-content">
-    <span class="eyebrow reveal-up">Пора остановить хаос</span>
-    <h2 class="finale-title reveal-up">Мы решаем <em>проблемы</em><br>маркетинга — а не создаём новые</h2>
-    <a href="mailto:hello@growflow.agency" class="finale-cta reveal-up" data-hover>Обсудить проект <span class="arrow">→</span></a>
-  </div>
-</section>
-
-<!-- ФУТЕР -->
 <footer class="site-footer">
-  <div class="footer-top">
-    <span class="logo-sm">Grow Flow<sup>°</sup></span>
-    <a href="mailto:hello@growflow.agency" data-hover>hello@growflow.agency</a>
-  </div>
-  <div class="footer-bottom">
-    <span>©2026 Grow Flow. Все права защищены.</span>
-    <span>Москва · Маркетинг · Продакшн</span>
-  </div>
+  <span>©2026 Grow Flow</span>
+  <a href="mailto:hello@growflow.agency">hello@growflow.agency</a>
 </footer>
 
 <script src="js/main.js"></script>
