@@ -1,14 +1,18 @@
 /* ============ ТОЧКИ ПОДКЛЮЧЕНИЯ МЕДИА ============
-   Единственное видео на сайте — hero/outro. Остальные секции идут
-   обычным потоком без картинки, фон переключают [data-theme]. */
+   Hero/outro-видео + одна кадровая секвенция для «Знакомства». Остальные
+   секции идут обычным потоком без картинки, фон переключают [data-theme]. */
 const HERO_VIDEO_URL = "assets/hero.mp4";
 const OUTRO_VIDEO_URL = "assets/hero.mp4"; // видео внутри финальной надписи — можно указать своё
 
+const SCENES_META = {
+  sceneA: { frames: 40, folder: 'assets/frames/sceneA' },
+};
+const TOTAL_FRAMES = SCENES_META.sceneA.frames;
+
 /* ==================================================================
-   ПРЕЛОАДЕР — на сайте больше нет тяжёлых JPEG-последовательностей,
-   ждать нечего кроме hero-видео, так что прогресс упрощён: быстро
-   доезжаем до ~92%, добираем до 100% по готовности видео или по таймауту.
+   ПРЕЛОАДЕР — агрегированный прогресс по кадрам «Знакомства»
    ================================================================== */
+let loadedFramesTotal = 0;
 const preloaderEl = document.getElementById('preloader');
 const preloaderFill = document.getElementById('preloaderFill');
 const preloaderPct = document.getElementById('preloaderPct');
@@ -21,11 +25,15 @@ function finishPreloader() {
   preloaderEl.classList.add('is-done');
   document.getElementById('progressRail').classList.add('is-visible');
 }
-requestAnimationFrame(() => {
-  preloaderFill.style.width = '92%';
-  preloaderPct.textContent = '92%';
-});
-setTimeout(finishPreloader, 1400);
+function bumpPreloader() {
+  loadedFramesTotal++;
+  const pct = Math.min(100, Math.round((loadedFramesTotal / TOTAL_FRAMES) * 100));
+  preloaderFill.style.width = pct + '%';
+  preloaderPct.textContent = pct + '%';
+  if (loadedFramesTotal >= TOTAL_FRAMES) finishPreloader();
+}
+// подстраховка: не держим прелоадер вечно, если что-то не догрузилось
+setTimeout(finishPreloader, 6000);
 
 /* ==================================================================
    HERO ВИДЕО
@@ -38,13 +46,113 @@ setTimeout(finishPreloader, 1400);
   video.classList.add('is-on');
   fallback.style.display = 'none';
   video.play().catch(() => {});
-  video.addEventListener('loadeddata', finishPreloader);
   video.addEventListener('error', () => {
     video.classList.remove('is-on');
     fallback.style.display = '';
-    finishPreloader();
   });
 })();
+
+/* ==================================================================
+   ЗНАКОМСТВО — скролл-скраббинг кадров на весь экран (object-fit: cover)
+   ================================================================== */
+function makeCoverScrubber({ sectionEl, canvasEl, frameCount, frameFolder, frameDigits = 3, onProgress }) {
+  const ctx = canvasEl.getContext('2d');
+  const images = new Array(frameCount);
+  let currentFrame = -1;
+  let lastBlendKey = null;
+  let sizedW = 0, sizedH = 0;
+
+  function frameSrc(i) {
+    const n = String(i + 1).padStart(frameDigits, '0');
+    return `${frameFolder}/f_${n}.jpg`;
+  }
+  for (let i = 0; i < frameCount; i++) {
+    const img = new Image();
+    img.src = frameSrc(i);
+    img.onload = () => { bumpPreloader(); if (i === 0) drawFrame(0); };
+    img.onerror = () => { bumpPreloader(); };
+    images[i] = img;
+  }
+
+  // канвас ресайзится под реальный размер вьюпорта (а не под кадр) —
+  // рисуем кадр с обрезкой по типу object-fit: cover, без полос по бокам
+  function ensureCanvasSize() {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const w = Math.round(canvasEl.clientWidth * dpr);
+    const h = Math.round(canvasEl.clientHeight * dpr);
+    if (w !== sizedW || h !== sizedH) {
+      sizedW = w; sizedH = h;
+      canvasEl.width = w; canvasEl.height = h;
+    }
+  }
+  function drawCover(img, alpha) {
+    const scale = Math.max(sizedW / img.naturalWidth, sizedH / img.naturalHeight);
+    const dw = img.naturalWidth * scale, dh = img.naturalHeight * scale;
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(img, (sizedW - dw) / 2, (sizedH - dh) / 2, dw, dh);
+  }
+
+  function drawFrame(index) {
+    index = Math.max(0, Math.min(frameCount - 1, Math.round(index)));
+    const img = images[index];
+    if (!img || !img.complete || img.naturalWidth === 0) return;
+    ensureCanvasSize();
+    currentFrame = index; lastBlendKey = null;
+    ctx.clearRect(0, 0, sizedW, sizedH);
+    drawCover(img, 1);
+    ctx.globalAlpha = 1;
+  }
+
+  function drawFrameBlended(floatIndex) {
+    floatIndex = Math.max(0, Math.min(frameCount - 1, floatIndex));
+    const lo = Math.floor(floatIndex);
+    const hi = Math.min(frameCount - 1, lo + 1);
+    const frac = floatIndex - lo;
+    const key = lo + '_' + frac.toFixed(3);
+    if (key === lastBlendKey) return;
+    const imgLo = images[lo];
+    if (!imgLo || !imgLo.complete || imgLo.naturalWidth === 0) return;
+    ensureCanvasSize();
+    lastBlendKey = key; currentFrame = lo;
+    ctx.clearRect(0, 0, sizedW, sizedH);
+    drawCover(imgLo, 1);
+    if (frac > 0.008 && hi !== lo) {
+      const imgHi = images[hi];
+      if (imgHi && imgHi.complete && imgHi.naturalWidth > 0) drawCover(imgHi, frac);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function getProgress(scrollPos) {
+    const total = sectionEl.offsetHeight - window.innerHeight;
+    if (total <= 0) return 0;
+    return Math.max(0, Math.min(1, (scrollPos - sectionEl.offsetTop) / total));
+  }
+  function update(scrollPos) {
+    const p = getProgress(scrollPos);
+    const floatIndex = p * (frameCount - 1);
+    drawFrameBlended(floatIndex);
+    if (onProgress) onProgress(p);
+    return p;
+  }
+  window.addEventListener('resize', () => { sizedW = 0; sizedH = 0; drawFrame(currentFrame); });
+  return { update, drawFrame };
+}
+
+const sceneAEl = document.getElementById('sceneA');
+const introCopy = document.getElementById('introCopy');
+const scrubA = makeCoverScrubber({
+  sectionEl: sceneAEl,
+  canvasEl: document.getElementById('canvasA'),
+  frameCount: SCENES_META.sceneA.frames,
+  frameFolder: SCENES_META.sceneA.folder,
+  onProgress(p) {
+    // текст появляется, когда руки уже почти легли на клавиатуру, и
+    // остаётся на экране до конца пина — после этого кадр «замирает»
+    // на последнем (руки на клавиатуре) и секция заканчивается
+    introCopy.classList.toggle('is-visible', p >= 0.82);
+  },
+});
 
 /* ==================================================================
    ФОН СЕКЦИЙ — общий фиксированный слой плавно перекрашивается, когда
@@ -198,6 +306,37 @@ contactForm.addEventListener('submit', (e) => {
 });
 
 /* ==================================================================
+   КЕЙСЫ — параллакс карточек доски работ
+   Абсолютная позиция каждой карточки в документе считается один раз
+   (и пересчитывается при resize), чтобы не зависеть от того, что
+   offsetParent карточки — сама позиционированная секция .cases-group.
+   ================================================================== */
+const prefersNoParallax = window.matchMedia('(pointer: coarse)').matches
+  || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const caseCards = Array.from(document.querySelectorAll('.case-card')).map(el => ({
+  el, speed: parseFloat(el.dataset.speed) || 0, centerY: 0,
+}));
+function measureCaseCards() {
+  caseCards.forEach(c => {
+    const rect = c.el.getBoundingClientRect();
+    c.centerY = rect.top + window.scrollY + rect.height / 2;
+  });
+}
+function updateCasesParallax(scrollPos) {
+  if (prefersNoParallax || !caseCards.length) return;
+  const viewportCenter = scrollPos + window.innerHeight / 2;
+  caseCards.forEach(c => {
+    const offset = (c.centerY - viewportCenter) * c.speed;
+    c.el.style.transform = `translateY(${offset.toFixed(1)}px)`;
+  });
+}
+if (!prefersNoParallax) {
+  measureCaseCards();
+  window.addEventListener('resize', measureCaseCards);
+  window.addEventListener('load', measureCaseCards);
+}
+
+/* ==================================================================
    HERO → следующая секция (кроссфейд по первым 100vh скролла)
    ================================================================== */
 const heroEl = document.getElementById('hero');
@@ -216,6 +355,7 @@ const stopSections = {
   hero: heroEl,
   sceneA: document.getElementById('sceneA'),
   sceneB: document.getElementById('sceneB'),
+  work: document.getElementById('work'),
   sceneC: document.getElementById('sceneC'),
   outro: document.getElementById('outro'),
 };
@@ -254,6 +394,8 @@ function frameTick(now) {
   if (diff < 0.4) smoothY = targetY;
 
   updateHero(smoothY);
+  scrubA.update(smoothY);
+  updateCasesParallax(smoothY);
   updateProgressRail(smoothY);
 
   if (diff < 0.4) {
@@ -280,6 +422,8 @@ if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
   window.addEventListener('scroll', () => {
     smoothY = window.scrollY;
     updateHero(smoothY);
+    scrubA.update(smoothY);
+    updateCasesParallax(smoothY);
     updateProgressRail(smoothY);
   }, { passive: true });
 }

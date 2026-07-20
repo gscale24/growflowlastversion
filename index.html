@@ -15,12 +15,14 @@
 
 <!--
   ═══════════════════════════════════════════════════════════
-  ВНИМАНИЕ: единственное видео на сайте — hero/outro (assets/hero.mp4).
-  Остальные секции — обычный поток без видео, фон чередует светлую и
-  тёмную темы (см. [data-theme] в css/style.css) и плавно перекрашивается
-  через #bgLayer при скролле. Карточки-плейсхолдеры в услугах (.service-object)
-  ждут реальной предметной съёмки. Телефон-мокап в контактах — концепт,
-  заменить на съёмку.
+  ВНИМАНИЕ: видео на сайте — hero/outro (assets/hero.mp4) и кадровая
+  секвенция «Знакомство» (assets/frames/sceneA, 40 кадров — временная
+  референсная съёмка, см. README). Тема каждой секции задаётся атрибутом
+  [data-theme] (см. css/style.css), фон плавно перекрашивается через
+  #bgLayer при скролле, без чередования по карточкам — по разделам:
+  Начало/Знакомство тёмные, Услуги и Контакты светлые, Кейсы тёмные.
+  Карточки-плейсхолдеры в услугах (.service-object) и кейсах (.case-card-media)
+  ждут реальной съёмки. Телефон-мокап в контактах — концепт, заменить на съёмку.
   ═══════════════════════════════════════════════════════════
 -->
 
@@ -44,6 +46,7 @@
     <li data-stop="hero" class="is-active"><span>Начало</span></li>
     <li data-stop="sceneA"><span>Знакомство</span></li>
     <li data-stop="sceneB"><span>Услуги</span></li>
+    <li data-stop="work"><span>Кейсы</span></li>
     <li data-stop="sceneC"><span>Контакты</span></li>
     <li data-stop="outro"><span>Финал</span></li>
   </ul>
@@ -65,12 +68,19 @@
   </div>
 </section>
 
-<!-- ================= ЗНАКОМСТВО (ex. Сцена A) — обычный поток, светлая тема ================= -->
-<section class="chapter chapter--intro" id="sceneA" data-theme="light">
-  <div class="chapter-inner reveal-block" data-reveal>
-    <span class="eyebrow">Как всё начиналось</span>
-    <h2>Мы садимся за стол так же, как и вы —<br>с чистого листа и списком дел, который никогда не кончается</h2>
-    <p>Grow Flow — команда стратегов, продюсеров и аналитиков. Мы не продаём «ведение соцсетей» — мы строим системы роста.</p>
+<!-- ================= ЗНАКОМСТВО — скролл-скраббинг сцены "подошёл, сел,
+     положил руки на клавиатуру", кадр на весь экран (cover, без обрезков
+     по бокам), синий акцент — тот же свет, что горит в кадре ================= -->
+<section class="intro-scene" id="sceneA" data-theme="dark">
+  <div class="intro-sticky">
+    <canvas id="canvasA"></canvas>
+    <div class="intro-tint"></div>
+
+    <div class="intro-copy" id="introCopy">
+      <span class="eyebrow">Как всё начиналось</span>
+      <h2>Мы садимся за стол так же, как и вы —<br>с чистого листа и списком дел, который никогда не кончается</h2>
+      <p>Grow Flow — команда стратегов, продюсеров и аналитиков. Мы не продаём «ведение соцсетей» — мы строим системы роста.</p>
+    </div>
   </div>
 </section>
 
@@ -112,7 +122,7 @@
         </div>
       </article>
 
-      <article class="service-block reveal-block" id="service-performance" data-service="performance" data-theme="dark" data-reveal>
+      <article class="service-block reveal-block" id="service-performance" data-service="performance" data-theme="light" data-reveal>
         <div class="service-block-inner">
           <span class="service-num">02</span>
           <h2 class="service-word">Таргет</h2>
@@ -148,7 +158,7 @@
         </div>
       </article>
 
-      <article class="service-block reveal-block" id="service-production" data-service="production" data-theme="dark" data-reveal>
+      <article class="service-block reveal-block" id="service-production" data-service="production" data-theme="light" data-reveal>
         <div class="service-block-inner">
           <span class="service-num">04</span>
           <h2 class="service-word">Продакшн</h2>
@@ -187,8 +197,75 @@
   </div>
 </div>
 
-<!-- ================= КОНТАКТЫ (ex. Сцена C) — обычный поток, тёмная тема ================= -->
-<section class="chapter chapter--contact" id="sceneC" data-theme="dark">
+<!-- ================= КЕЙСЫ — доска работ с параллаксом, по образцу
+     секции WORK на kookie-kollective.com: белые карточки внахлёст на
+     чёрном фоне, гигантская фоновая надпись, карточки едут с разной
+     скоростью при скролле ================= -->
+<section class="cases-group" id="work" data-theme="dark">
+
+  <div class="services-groupbar services-groupbar--top">
+    <span class="services-index">03<i></i>Кейсы</span>
+    <span class="services-brand">Grow Flow<b>+</b></span>
+  </div>
+
+  <div class="cases-frame">
+    <span class="cases-bg-text" aria-hidden="true">НАШИ<br>РАБОТЫ</span>
+
+    <div class="cases-grid">
+      <a href="#" class="case-card" data-speed="0.1" data-reveal>
+        <div class="case-card-media case-card-media--1"><span>N</span></div>
+        <div class="case-card-body">
+          <span class="case-card-name">Nord Coffee</span>
+          <span class="case-card-tags"><span>SMM</span><span>Продакшн</span></span>
+        </div>
+      </a>
+      <a href="#" class="case-card" data-speed="-0.08" data-reveal>
+        <div class="case-card-media case-card-media--2"><span>R</span></div>
+        <div class="case-card-body">
+          <span class="case-card-name">Reva Studio</span>
+          <span class="case-card-tags"><span>Таргет</span></span>
+        </div>
+      </a>
+      <a href="#" class="case-card" data-speed="0.14" data-reveal>
+        <div class="case-card-media case-card-media--3"><span>A</span></div>
+        <div class="case-card-body">
+          <span class="case-card-name">Alma Clinic</span>
+          <span class="case-card-tags"><span>SEO</span></span>
+        </div>
+      </a>
+      <a href="#" class="case-card" data-speed="-0.1" data-reveal>
+        <div class="case-card-media case-card-media--4"><span>F</span></div>
+        <div class="case-card-body">
+          <span class="case-card-name">Format Wear</span>
+          <span class="case-card-tags"><span>Продакшн</span><span>SMM</span></span>
+        </div>
+      </a>
+      <a href="#" class="case-card" data-speed="0.08" data-reveal>
+        <div class="case-card-media case-card-media--5"><span>S</span></div>
+        <div class="case-card-body">
+          <span class="case-card-name">Sova Bank</span>
+          <span class="case-card-tags"><span>SMM</span><span>Таргет</span></span>
+        </div>
+      </a>
+      <a href="#" class="case-card" data-speed="-0.12" data-reveal>
+        <div class="case-card-media case-card-media--6"><span>P</span></div>
+        <div class="case-card-body">
+          <span class="case-card-name">Panorama</span>
+          <span class="case-card-tags"><span>Продакшн</span><span>SEO</span></span>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <div class="services-groupbar services-groupbar--bottom">
+    <span class="services-hint">Скролль дальше</span>
+    <span class="services-rec"><i></i>REC</span>
+  </div>
+
+</section>
+
+<!-- ================= КОНТАКТЫ (ex. Сцена C) — обычный поток, светлая тема ================= -->
+<section class="chapter chapter--contact" id="sceneC" data-theme="light">
   <div class="chapter-inner contact-inner reveal-block" data-reveal>
 
     <div class="contact-panel">
