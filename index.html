@@ -37,7 +37,6 @@
     <li data-stop="hero" class="is-active"><span>Начало</span></li>
     <li data-stop="sceneA"><span>Знакомство</span></li>
     <li data-stop="sceneB"><span>Услуги</span></li>
-    <li data-stop="work"><span>Кейсы</span></li>
     <li data-stop="sceneC"><span>Контакты</span></li>
     <li data-stop="outro"><span>Финал</span></li>
   </ul>
@@ -94,9 +93,12 @@
       <button class="services-tab" data-segment="3" data-service="production" type="button">Продакшн</button>
     </nav>
 
-    <!-- гигантское слово активной категории -->
+    <!-- гигантское слово активной категории: непрерывный параллакс-переход,
+         привязанный к скроллу — «уходящее» слово и «входящее» едут
+         навстречу друг другу вместо мгновенной подмены -->
     <div class="services-headline-wrap">
-      <h2 class="services-headline" id="servicesHeadline">SMM</h2>
+      <h2 class="services-headline services-headline--out" id="servicesHeadlineOut">SMM</h2>
+      <h2 class="services-headline services-headline--in" id="servicesHeadlineIn">Таргет</h2>
     </div>
 
     <!-- описание + состав работ активной категории -->
@@ -119,46 +121,6 @@
     <ul id="modalScope"></ul>
   </div>
 </div>
-
-<!-- ================= WORK — кейсы с параллаксом ================= -->
-<section class="work" id="work">
-  <span class="work-bg-text" aria-hidden="true">НАШИ<br>РАБОТЫ</span>
-  <span class="eyebrow work-eyebrow">02 — Кейсы</span>
-
-  <div class="work-grid">
-    <!-- плейсхолдер-кейсы: заменить на реальные проекты -->
-    <a href="#" class="work-card" data-speed="0.12">
-      <div class="work-card-media work-card-media--1"></div>
-      <span class="work-card-name">Nord Coffee</span>
-      <span class="work-card-tag">SMM</span>
-    </a>
-    <a href="#" class="work-card" data-speed="-0.08">
-      <div class="work-card-media work-card-media--2"></div>
-      <span class="work-card-name">Reva Studio</span>
-      <span class="work-card-tag">Таргет</span>
-    </a>
-    <a href="#" class="work-card" data-speed="0.18">
-      <div class="work-card-media work-card-media--3"></div>
-      <span class="work-card-name">Alma Clinic</span>
-      <span class="work-card-tag">SEO</span>
-    </a>
-    <a href="#" class="work-card" data-speed="-0.14">
-      <div class="work-card-media work-card-media--4"></div>
-      <span class="work-card-name">Format Wear</span>
-      <span class="work-card-tag">Продакшн</span>
-    </a>
-    <a href="#" class="work-card" data-speed="0.1">
-      <div class="work-card-media work-card-media--5"></div>
-      <span class="work-card-name">Sova Bank</span>
-      <span class="work-card-tag">SMM</span>
-    </a>
-    <a href="#" class="work-card" data-speed="-0.1">
-      <div class="work-card-media work-card-media--6"></div>
-      <span class="work-card-name">Panorama</span>
-      <span class="work-card-tag">Продакшн</span>
-    </a>
-  </div>
-</section>
 
 <!-- ================= SCENE C — заметки + мокап телефона ================= -->
 <section class="scene scene--contact" id="sceneC" style="--frames:50">
@@ -216,8 +178,11 @@
 </section>
 
 <footer class="site-footer">
-  <span>©2026 Grow Flow</span>
-  <a href="mailto:hello@growflow.agency">hello@growflow.agency</a>
+  <span class="footer-wordmark" aria-hidden="true">GROW FLOW</span>
+  <div class="footer-bottom-row">
+    <span>©2026 Grow Flow</span>
+    <a href="mailto:hello@growflow.agency">hello@growflow.agency</a>
+  </div>
 </footer>
 
 <script src="js/main.js"></script>

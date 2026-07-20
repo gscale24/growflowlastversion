@@ -193,9 +193,12 @@ const serviceData = {
 };
 
 const sceneBEl = document.getElementById('sceneB');
+const canvasBEl = document.getElementById('canvasB');
 const serviceTabs = Array.from(document.querySelectorAll('.services-tab'));
 const SEGMENTS = serviceTabs.length;
-const servicesHeadline = document.getElementById('servicesHeadline');
+const serviceWords = serviceTabs.map(tab => serviceData[tab.dataset.service].word);
+const headlineOut = document.getElementById('servicesHeadlineOut');
+const headlineIn = document.getElementById('servicesHeadlineIn');
 const servicesDesc = document.getElementById('servicesDesc');
 const servicesScope = document.getElementById('servicesScope');
 const servicesMore = document.getElementById('servicesMore');
@@ -212,32 +215,45 @@ function renderServiceCopy(key) {
     servicesScope.appendChild(li);
   });
 }
-
-function setActiveService(key, segmentIndex) {
-  if (key === activeServiceKey) return;
-  activeServiceKey = key;
-  serviceTabs.forEach((tab, i) => tab.classList.toggle('is-active', i === segmentIndex));
-  servicesHeadline.classList.remove('is-in');
-  requestAnimationFrame(() => {
-    servicesHeadline.textContent = serviceData[key].word;
-    requestAnimationFrame(() => servicesHeadline.classList.add('is-in'));
-  });
-  renderServiceCopy(key);
-}
-// первичная отрисовка
-serviceTabs[0].classList.add('is-active');
-servicesHeadline.textContent = serviceData[activeServiceKey].word;
-servicesHeadline.classList.add('is-in');
 renderServiceCopy(activeServiceKey);
+serviceTabs[0].classList.add('is-active');
+headlineOut.textContent = serviceWords[0];
+headlineIn.textContent = serviceWords[Math.min(1, SEGMENTS - 1)];
+
+// плавная кривая ease-in-out для перехода внутри сегмента
+function smoothstep(t) { return t * t * (3 - 2 * t); }
 
 const scrubB = makeScrubber({
   sectionEl: sceneBEl,
-  canvasEl: document.getElementById('canvasB'),
+  canvasEl: canvasBEl,
   frameCount: SCENES_META.sceneB.frames,
   frameFolder: SCENES_META.sceneB.folder,
   onProgress(p) {
-    const segment = Math.min(SEGMENTS - 1, Math.floor(p * SEGMENTS));
-    setActiveService(serviceTabs[segment].dataset.service, segment);
+    const segFloat = Math.min(SEGMENTS - 0.0001, Math.max(0, p * SEGMENTS));
+    const segIndex = Math.floor(segFloat);
+    const nextIndex = Math.min(SEGMENTS - 1, segIndex + 1);
+    const frac = smoothstep(segFloat - segIndex);
+
+    // непрерывный "перелистывающий" параллакс гигантского слова —
+    // уходящее слово едет вверх и гаснет, входящее едет снизу навстречу,
+    // оба напрямую следуют за скроллом, без transition и рывков
+    headlineOut.textContent = serviceWords[segIndex];
+    headlineIn.textContent = serviceWords[nextIndex];
+    headlineOut.style.transform = `translateY(${(-frac * 55).toFixed(1)}%)`;
+    headlineOut.style.opacity = String(Math.max(0, 1 - frac * 1.2));
+    headlineIn.style.transform = `translateY(${((1 - frac) * 55).toFixed(1)}%)`;
+    headlineIn.style.opacity = String(frac);
+
+    // лёгкий параллакс-дрейф самого кадра видео вслед за перелистыванием
+    const drift = (frac - 0.5) * 26;
+    canvasBEl.style.transform = `translate(calc(-50% + ${drift.toFixed(1)}px), -50%) scale(1.025)`;
+
+    const key = serviceTabs[segIndex].dataset.service;
+    if (key !== activeServiceKey) {
+      activeServiceKey = key;
+      serviceTabs.forEach((tab, i) => tab.classList.toggle('is-active', i === segIndex));
+      renderServiceCopy(key);
+    }
   }
 });
 
@@ -365,7 +381,7 @@ function updateHero(scrollPos) {
    ================================================================== */
 const progressFill = document.getElementById('progressFill');
 const railStops = Array.from(document.querySelectorAll('.progress-rail-stops li'));
-const stopSections = { hero: heroEl, sceneA: sceneAEl, sceneB: sceneBEl, work: document.getElementById('work'), sceneC: sceneCEl, outro: document.getElementById('outro') };
+const stopSections = { hero: heroEl, sceneA: sceneAEl, sceneB: sceneBEl, sceneC: sceneCEl, outro: document.getElementById('outro') };
 
 function updateProgressRail(scrollPos) {
   const docHeight = document.body.scrollHeight - window.innerHeight;
@@ -377,37 +393,6 @@ function updateProgressRail(scrollPos) {
     if (scrollPos >= el.offsetTop - window.innerHeight * 0.5) activeKey = key;
   });
   railStops.forEach(li => li.classList.toggle('is-active', li.dataset.stop === activeKey));
-}
-
-/* ==================================================================
-   WORK — параллакс карточек кейсов
-   Абсолютная позиция каждой карточки в документе считается один раз
-   (и пересчитывается при resize), чтобы не зависеть от того, что
-   offsetParent карточки — сама позиционированная секция .work.
-   ================================================================== */
-const prefersNoParallax = window.matchMedia('(pointer: coarse)').matches
-  || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const workCards = Array.from(document.querySelectorAll('.work-card')).map(el => ({
-  el, speed: parseFloat(el.dataset.speed) || 0, centerY: 0,
-}));
-function measureWorkCards() {
-  workCards.forEach(c => {
-    const rect = c.el.getBoundingClientRect();
-    c.centerY = rect.top + window.scrollY + rect.height / 2;
-  });
-}
-function updateWorkParallax(scrollPos) {
-  if (prefersNoParallax || !workCards.length) return;
-  const viewportCenter = scrollPos + window.innerHeight / 2;
-  workCards.forEach(c => {
-    const offset = (c.centerY - viewportCenter) * c.speed;
-    c.el.style.transform = `translateY(${offset.toFixed(1)}px)`;
-  });
-}
-if (!prefersNoParallax) {
-  measureWorkCards();
-  window.addEventListener('resize', measureWorkCards);
-  window.addEventListener('load', measureWorkCards);
 }
 
 /* ==================================================================
@@ -435,7 +420,6 @@ function frameTick(now) {
   updateHero(smoothY);
   scrubA.update(smoothY);
   scrubB.update(smoothY);
-  updateWorkParallax(smoothY);
   scrubC.update(smoothY);
   updateProgressRail(smoothY);
 
@@ -465,7 +449,6 @@ if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     updateHero(smoothY);
     scrubA.update(smoothY);
     scrubB.update(smoothY);
-    updateWorkParallax(smoothY);
     scrubC.update(smoothY);
     updateProgressRail(smoothY);
   }, { passive: true });
