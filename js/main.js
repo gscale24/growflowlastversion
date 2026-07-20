@@ -167,46 +167,142 @@ const scrubA = makeCoverScrubber({
 });
 
 /* ==================================================================
-   ФОН СЕКЦИЙ — общий фиксированный слой плавно перекрашивается, когда
-   середина вьюпорта переходит в секцию с другой [data-theme].
+   ФОН СЕКЦИЙ — вся страница как единое полотно с непрерывным градиентом
+   между тёмными и светлыми разделами, а не набор карточек-секций со
+   своим фоном каждая.
 
-   Раньше это решалось через IntersectionObserver с rootMargin по центру
-   вьюпорта, но с высокими секциями (например, вся доска «Кейсы» одним
-   [data-theme]) это давало гонку: секция начинает считаться
-   "пересекающей центр" уже в момент, когда её верх только чуть зашёл за
-   середину экрана — то есть ещё до того, как предыдущая секция
-   реально перестала быть по центру. Если в одном кадре наблюдателя
-   пересекались сразу две секции, применялась тема той, что шла последней
-   в DOM, независимо от того, что фактически видно в центре экрана.
-   Вместо этого просто ищем секцию, чей верх выше центра вьюпорта, но
-   ближе всех к нему — детерминированно, без гонки между кадрами.
-   Тем же проходом подсвечиваем активную вкладку услуги.
+   Раньше цвет переключался дискретно (найти секцию под центром вьюпорта
+   → мгновенно применить её [data-theme] → сгладить ЭТОТ скачок отдельным
+   CSS transition на #bgLayer). Так и получался эффект, который viewer
+   считывает как шов: секция ещё "не доехала", а фон уже прыгнул и после
+   этого время просто "догоняет" целевой цвет — то есть сама смена
+   привязана к событию (порог пересечения), а не к позиции скролла
+   напрямую. Отсюда же плоская серая заглушка в середине перехода —
+   time-based transition не знает о позиции скролла, он просто едет по
+   своей кривой независимо от того, крутит ли пользователь колесо дальше
+   или уже остановился.
+
+   Вместо этого ниже цвет каждый кадр СЧИТАЕТСЯ напрямую как функция
+   позиции скролла: между соседними опорными точками (границами смены
+   темы) идёт RGB-интерполяция, растянутая на протяжённую зону в
+   несколько сотен пикселей по обе стороны границы. Раньше это решалось
+   через IntersectionObserver с rootMargin по центру вьюпорта, но с
+   высокими секциями (например, вся доска «Кейсы» одним [data-theme])
+   это давало гонку: секция начинает считаться "пересекающей центр" уже в
+   момент, когда её верх только чуть зашёл за середину экрана. Детермини-
+   рованный проход по опорным точкам (docTop) убирает и эту гонку —
+   опорные точки просто идут по порядку в документе.
+
+   Соседние опорные точки с одинаковой темой (например, все 4 карточки
+   «Услуг» — светлые) схлопываются в одну — переходная зона открывается
+   только там, где тема реально меняется. Тем же проходом (по отдельному,
+   дискретному списку) подсвечивается активная вкладка услуги — для
+   вкладки континуальность не нужна, это обычный дискретный UI-статус.
    ================================================================== */
 const bgLayer = document.getElementById('bgLayer');
-const THEME_COLORS = { light: '#f2efe7', dark: '#0a0a0a' };
+const rootStyle = document.documentElement.style;
 const serviceTabs = Array.from(document.querySelectorAll('.services-tab'));
+
+// цветовые опоры тем — те же значения, что раньше жили в [data-theme] CSS
+const THEME_RGB = {
+  light: { bg: [242, 239, 231], fg: [12, 11, 9], fgDim: [109, 104, 92], line: [12, 11, 9], lineA: 0.16, accent: [12, 11, 9] },
+  dark: { bg: [10, 10, 10], fg: [245, 242, 234], fgDim: [143, 139, 130], line: [245, 242, 234], lineA: 0.12, accent: [201, 166, 104] },
+};
 
 const themeSections = Array.from(document.querySelectorAll('[data-theme]')).map((el) => ({
   el, theme: el.dataset.theme, service: el.dataset.service || null, docTop: 0,
 }));
+
+// опорные точки смены темы: старт страницы (hero — неявно тёмный, как в
+// :root по умолчанию) + только те секции, где тема реально отличается от
+// предыдущей опоры
+let themeStops = [];
 function measureThemeSections() {
   themeSections.forEach((s) => { s.docTop = s.el.getBoundingClientRect().top + window.scrollY; });
+  themeStops = [{ docTop: -Infinity, theme: 'dark' }];
+  themeSections.forEach((s) => {
+    if (s.theme && themeStops[themeStops.length - 1].theme !== s.theme) {
+      themeStops.push({ docTop: s.docTop, theme: s.theme });
+    }
+  });
 }
 measureThemeSections();
 window.addEventListener('resize', measureThemeSections);
 window.addEventListener('load', measureThemeSections);
 
+function lerp(a, b, t) { return a + (b - a) * t; }
+function lerpRGB(a, b, t) { return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]; }
+function rgbStr(c) { return `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`; }
+function rgbaStr(c, a) { return `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`; }
+// smoothstep — по краям зоны переход стартует/останавливается мягче, чем
+// по прямой, ещё меньше ощущается сама точка начала/конца интерполяции
+function smoothstep(t) { return t * t * (3 - 2 * t); }
+
 function updateTheme(scrollPos) {
   const center = scrollPos + window.innerHeight / 2;
-  let current = themeSections[0];
+  // ширина зоны, в которой цвет реально едет от одной темы к другой —
+  // привязана к высоте вьюпорта, чтобы на любом экране переход читался
+  // одинаково плавно, но не размывался на несколько разделов подряд.
+  // Зона симметрична вокруг границы (docTop следующей опоры) — начинается
+  // за half ДО неё и заканчивается через half ПОСЛЕ.
+  const zone = Math.max(480, Math.min(1100, window.innerHeight * 0.9));
+  const half = zone / 2;
+
+  // Идём по опорам по порядку. Как только текущая граница ещё не
+  // достигнута (центр раньше её zoneStart) — тема уже устоялась на
+  // предыдущем шаге, останавливаемся. Если центр внутри зоны — это и
+  // есть текущий переход, интерполируем и останавливаемся. Если центр
+  // уже за zoneEnd — тема "оседает" на эту опору целиком, и проверка
+  // идёт дальше, к следующей возможной границе. Важно: переключение
+  // пары from/to происходит по границам самой зоны (zoneStart/zoneEnd),
+  // а не по одной точке docTop посередине — иначе смена пары обрывает
+  // интерполяцию на середине и цвет прыгает к чистому значению вместо
+  // того, чтобы доехать до конца зоны.
+  let fromTheme = themeStops[0].theme;
+  let toTheme = fromTheme;
+  let t = 0;
+  for (let k = 1; k < themeStops.length; k++) {
+    const boundary = themeStops[k].docTop;
+    const zoneStart = boundary - half;
+    const zoneEnd = boundary + half;
+    if (center < zoneStart) break;
+    if (center <= zoneEnd) {
+      fromTheme = themeStops[k - 1].theme;
+      toTheme = themeStops[k].theme;
+      t = smoothstep((center - zoneStart) / zone);
+      break;
+    }
+    fromTheme = themeStops[k].theme;
+    toTheme = fromTheme;
+    t = 0;
+  }
+
+  const a = THEME_RGB[fromTheme];
+  const b = THEME_RGB[toTheme];
+  const bg = lerpRGB(a.bg, b.bg, t);
+  const fg = lerpRGB(a.fg, b.fg, t);
+  const fgDim = lerpRGB(a.fgDim, b.fgDim, t);
+  const line = lerpRGB(a.line, b.line, t);
+  const lineA = lerp(a.lineA, b.lineA, t);
+  const accent = lerpRGB(a.accent, b.accent, t);
+
+  const bgColor = rgbStr(bg);
+  bgLayer.style.backgroundColor = bgColor;
+  rootStyle.setProperty('--bg', bgColor);
+  rootStyle.setProperty('--fg', rgbStr(fg));
+  rootStyle.setProperty('--fg-dim', rgbStr(fgDim));
+  rootStyle.setProperty('--line', rgbaStr(line, lineA.toFixed(3)));
+  rootStyle.setProperty('--accent', rgbStr(accent));
+
+  // активная вкладка услуги — отдельный дискретный проход по секциям с
+  // .service, той же логикой "последняя опора выше центра", что и раньше
+  let currentService = null;
   for (const s of themeSections) {
-    if (s.docTop <= center) current = s;
+    if (s.docTop <= center) { if (s.service) currentService = s.service; }
     else break;
   }
-  if (!current) return;
-  if (current.theme && THEME_COLORS[current.theme]) bgLayer.style.backgroundColor = THEME_COLORS[current.theme];
-  if (current.service) {
-    serviceTabs.forEach((tab) => tab.classList.toggle('is-active', tab.dataset.service === current.service));
+  if (currentService) {
+    serviceTabs.forEach((tab) => tab.classList.toggle('is-active', tab.dataset.service === currentService));
   }
 }
 
