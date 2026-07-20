@@ -15,7 +15,7 @@
 
 <!--
   ═══════════════════════════════════════════════════════════
-  ВНИМАНИЕ: видео на сайте — hero/outro (assets/hero.mp4) и кадровая
+  ВНИМАНИЕ: видео на сайте — hero (assets/hero.mp4) и кадровая
   секвенция «Знакомство» (assets/frames/sceneA, 24 кадра — вырезаны
   только те, где свет в комнате синий, исходник шире и там свет ещё
   циклится по цветам; временная референсная съёмка, см. README). Тема
@@ -50,7 +50,6 @@
     <li data-stop="sceneB"><span>Услуги</span></li>
     <li data-stop="work"><span>Кейсы</span></li>
     <li data-stop="sceneC"><span>Контакты</span></li>
-    <li data-stop="outro"><span>Финал</span></li>
   </ul>
 </nav>
 
@@ -106,7 +105,7 @@
 
     <div class="services-blocks">
 
-      <article class="service-block reveal-block" id="service-smm" data-service="smm" data-theme="light">
+      <article class="service-block" id="service-smm" data-service="smm" data-theme="light">
         <div class="service-block-inner">
           <span class="service-num">01</span>
           <h2 class="service-word">SMM</h2>
@@ -124,7 +123,7 @@
         </div>
       </article>
 
-      <article class="service-block reveal-block" id="service-performance" data-service="performance" data-theme="light">
+      <article class="service-block" id="service-performance" data-service="performance" data-theme="light">
         <div class="service-block-inner">
           <span class="service-num">02</span>
           <h2 class="service-word">Таргет</h2>
@@ -142,7 +141,7 @@
         </div>
       </article>
 
-      <article class="service-block reveal-block" id="service-seo" data-service="seo" data-theme="light">
+      <article class="service-block" id="service-seo" data-service="seo" data-theme="light">
         <div class="service-block-inner">
           <span class="service-num">03</span>
           <h2 class="service-word">SEO</h2>
@@ -160,7 +159,7 @@
         </div>
       </article>
 
-      <article class="service-block reveal-block" id="service-production" data-service="production" data-theme="light">
+      <article class="service-block" id="service-production" data-service="production" data-theme="light">
         <div class="service-block-inner">
           <span class="service-num">04</span>
           <h2 class="service-word">Продакшн</h2>
@@ -208,6 +207,19 @@
   <div class="services-groupbar services-groupbar--top">
     <span class="services-index">03<i></i>Кейсы</span>
     <span class="services-brand">Grow Flow<b>+</b></span>
+  </div>
+
+  <!-- заставка перед доской кейсов, по образцу заглавного экрана
+       секции WORK на kookie-kollective.com -->
+  <div class="cases-intro">
+    <div class="cases-intro-bg" aria-hidden="true"></div>
+    <span class="cases-intro-corner cases-intro-corner--tl" aria-hidden="true"></span>
+    <span class="cases-intro-corner cases-intro-corner--tr" aria-hidden="true"></span>
+    <span class="cases-intro-corner cases-intro-corner--bl" aria-hidden="true"></span>
+    <span class="cases-intro-corner cases-intro-corner--br" aria-hidden="true"></span>
+    <span class="cases-intro-plus cases-intro-plus--1" aria-hidden="true">+</span>
+    <span class="cases-intro-plus cases-intro-plus--2" aria-hidden="true">+</span>
+    <h2 class="cases-intro-title">НАШИ<br>РАБОТЫ</h2>
   </div>
 
   <div class="cases-frame">
@@ -311,22 +323,6 @@
 
   </div>
 </section>
-
-<!-- ================= OUTRO — видео в маске гигантской надписи ================= -->
-<section class="outro" id="outro">
-  <video class="outro-video" id="outroVideo" muted loop playsinline aria-hidden="true"></video>
-  <canvas class="outro-canvas" id="outroCanvas" aria-hidden="true"></canvas>
-  <span class="outro-fallback-text" aria-hidden="true">GROW<br>FLOW</span>
-  <p class="outro-sr-only">Grow Flow — маркетинговое агентство полного цикла</p>
-</section>
-
-<footer class="site-footer">
-  <span class="footer-wordmark" aria-hidden="true">GROW FLOW</span>
-  <div class="footer-bottom-row">
-    <span>©2026 Grow Flow</span>
-    <a href="mailto:hello@growflow.agency">hello@growflow.agency</a>
-  </div>
-</footer>
 
 <script src="js/main.js"></script>
 </body>
