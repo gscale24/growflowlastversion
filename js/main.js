@@ -5,7 +5,7 @@ const HERO_VIDEO_URL = "assets/hero.mp4";
 const OUTRO_VIDEO_URL = "assets/hero.mp4"; // видео внутри финальной надписи — можно указать своё
 
 const SCENES_META = {
-  sceneA: { frames: 40, folder: 'assets/frames/sceneA' },
+  sceneA: { frames: 24, folder: 'assets/frames/sceneA' },
 };
 const TOTAL_FRAMES = SCENES_META.sceneA.frames;
 
@@ -55,9 +55,10 @@ setTimeout(finishPreloader, 6000);
 /* ==================================================================
    ЗНАКОМСТВО — скролл-скраббинг кадров на весь экран (object-fit: cover)
    ================================================================== */
-function makeCoverScrubber({ sectionEl, canvasEl, frameCount, frameFolder, frameDigits = 3, onProgress }) {
+function makeCoverScrubber({ sectionEl, canvasEl, frameCount, frameFolder, frameDigits = 3, hardCuts = [], onProgress }) {
   const ctx = canvasEl.getContext('2d');
   const images = new Array(frameCount);
+  const hardCutSet = new Set(hardCuts);
   let currentFrame = -1;
   let lastBlendKey = null;
   let sizedW = 0, sizedH = 0;
@@ -92,20 +93,6 @@ function makeCoverScrubber({ sectionEl, canvasEl, frameCount, frameFolder, frame
     ctx.drawImage(img, (sizedW - dw) / 2, (sizedH - dh) / 2, dw, dh);
   }
 
-  // референсная съёмка на исходнике на середине секвенции уезжает в
-  // зелёный (смена света в самом ролике) — накладываем синий тон через
-  // composite-режим 'color' (берёт оттенок/насыщенность заливки, яркость
-  // оставляет от кадра), чтобы весь скролл читался одним и тем же синим
-  // светом, а не скакал по цвету вместе с исходником
-  function applyColorGrade() {
-    ctx.globalAlpha = 1;
-    ctx.globalCompositeOperation = 'color';
-    ctx.fillStyle = '#4a86c2';
-    ctx.fillRect(0, 0, sizedW, sizedH);
-    ctx.globalAlpha = 1;
-    ctx.globalCompositeOperation = 'source-over';
-  }
-
   function drawFrame(index) {
     index = Math.max(0, Math.min(frameCount - 1, Math.round(index)));
     const img = images[index];
@@ -114,7 +101,7 @@ function makeCoverScrubber({ sectionEl, canvasEl, frameCount, frameFolder, frame
     currentFrame = index; lastBlendKey = null;
     ctx.clearRect(0, 0, sizedW, sizedH);
     drawCover(img, 1);
-    applyColorGrade();
+    ctx.globalAlpha = 1;
   }
 
   function drawFrameBlended(floatIndex) {
@@ -129,12 +116,21 @@ function makeCoverScrubber({ sectionEl, canvasEl, frameCount, frameFolder, frame
     ensureCanvasSize();
     lastBlendKey = key; currentFrame = lo;
     ctx.clearRect(0, 0, sizedW, sizedH);
-    drawCover(imgLo, 1);
-    if (frac > 0.008 && hi !== lo) {
-      const imgHi = images[hi];
-      if (imgHi && imgHi.complete && imgHi.naturalWidth > 0) drawCover(imgHi, frac);
+    if (hardCutSet.has(lo) && hi !== lo) {
+      // монтажная склейка (в кадрах вырезан кусок ролика) — соседние
+      // кадры тут визуально не соседние, обычный кроссфейд даёт двойную
+      // экспозицию (руки видно сразу в двух местах), поэтому режем жёстко
+      // по середине, без промежуточного альфа-блендинга
+      const img = frac < 0.5 ? imgLo : images[hi];
+      if (img && img.complete && img.naturalWidth > 0) drawCover(img, 1);
+    } else {
+      drawCover(imgLo, 1);
+      if (frac > 0.008 && hi !== lo) {
+        const imgHi = images[hi];
+        if (imgHi && imgHi.complete && imgHi.naturalWidth > 0) drawCover(imgHi, frac);
+      }
     }
-    applyColorGrade();
+    ctx.globalAlpha = 1;
   }
 
   function getProgress(scrollPos) {
@@ -160,6 +156,9 @@ const scrubA = makeCoverScrubber({
   canvasEl: document.getElementById('canvasA'),
   frameCount: SCENES_META.sceneA.frames,
   frameFolder: SCENES_META.sceneA.folder,
+  // между 14-м и 15-м кадром — монтажная склейка (вырезан кусок ролика
+  // с чужим цветом света), кадры там не соседние по-настоящему
+  hardCuts: [13],
   onProgress(p) {
     // текст появляется, когда руки уже почти легли на клавиатуру, и
     // остаётся на экране до конца пина — после этого кадр «замирает»
@@ -170,26 +169,47 @@ const scrubA = makeCoverScrubber({
 
 /* ==================================================================
    ФОН СЕКЦИЙ — общий фиксированный слой плавно перекрашивается, когда
-   середина вьюпорта пересекает секцию с другой [data-theme], вместо
-   резкой смены цвета на границе блока. Тем же наблюдателем подсвечиваем
-   активную вкладку услуги, когда в фокусе конкретная карточка.
+   середина вьюпорта переходит в секцию с другой [data-theme].
+
+   Раньше это решалось через IntersectionObserver с rootMargin по центру
+   вьюпорта, но с высокими секциями (например, вся доска «Кейсы» одним
+   [data-theme]) это давало гонку: секция начинает считаться
+   "пересекающей центр" уже в момент, когда её верх только чуть зашёл за
+   середину экрана — то есть ещё до того, как предыдущая секция
+   реально перестала быть по центру. Если в одном кадре наблюдателя
+   пересекались сразу две секции, применялась тема той, что шла последней
+   в DOM, независимо от того, что фактически видно в центре экрана.
+   Вместо этого просто ищем секцию, чей верх выше центра вьюпорта, но
+   ближе всех к нему — детерминированно, без гонки между кадрами.
+   Тем же проходом подсвечиваем активную вкладку услуги.
    ================================================================== */
 const bgLayer = document.getElementById('bgLayer');
 const THEME_COLORS = { light: '#f2efe7', dark: '#0a0a0a' };
 const serviceTabs = Array.from(document.querySelectorAll('.services-tab'));
 
-const themeObserver = new IntersectionObserver((entries) => {
-  entries.forEach((entry) => {
-    if (!entry.isIntersecting) return;
-    const theme = entry.target.dataset.theme;
-    if (theme && THEME_COLORS[theme]) bgLayer.style.backgroundColor = THEME_COLORS[theme];
-    const service = entry.target.dataset.service;
-    if (service) {
-      serviceTabs.forEach((tab) => tab.classList.toggle('is-active', tab.dataset.service === service));
-    }
-  });
-}, { rootMargin: '-50% 0px -50% 0px', threshold: 0 });
-document.querySelectorAll('[data-theme]').forEach((el) => themeObserver.observe(el));
+const themeSections = Array.from(document.querySelectorAll('[data-theme]')).map((el) => ({
+  el, theme: el.dataset.theme, service: el.dataset.service || null, docTop: 0,
+}));
+function measureThemeSections() {
+  themeSections.forEach((s) => { s.docTop = s.el.getBoundingClientRect().top + window.scrollY; });
+}
+measureThemeSections();
+window.addEventListener('resize', measureThemeSections);
+window.addEventListener('load', measureThemeSections);
+
+function updateTheme(scrollPos) {
+  const center = scrollPos + window.innerHeight / 2;
+  let current = themeSections[0];
+  for (const s of themeSections) {
+    if (s.docTop <= center) current = s;
+    else break;
+  }
+  if (!current) return;
+  if (current.theme && THEME_COLORS[current.theme]) bgLayer.style.backgroundColor = THEME_COLORS[current.theme];
+  if (current.service) {
+    serviceTabs.forEach((tab) => tab.classList.toggle('is-active', tab.dataset.service === current.service));
+  }
+}
 
 /* ==================================================================
    REVEAL-ПО-СКРОЛЛУ — карточки/блоки плавно "разворачиваются" при
@@ -204,6 +224,15 @@ const revealObserver = new IntersectionObserver((entries) => {
   });
 }, { threshold: 0.18, rootMargin: '0px 0px -8% 0px' });
 document.querySelectorAll('[data-reveal]').forEach((el) => revealObserver.observe(el));
+
+// услуги — особый случай: появляются при скролле вниз и точно так же
+// плавно исчезают при скролле вверх (не одноразовый reveal)
+const serviceRevealObserver = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    entry.target.classList.toggle('is-visible', entry.isIntersecting);
+  });
+}, { threshold: 0.15, rootMargin: '0px 0px -8% 0px' });
+document.querySelectorAll('.service-block').forEach((el) => serviceRevealObserver.observe(el));
 
 /* ==================================================================
    УСЛУГИ — вкладки скроллят к своей карточке; хоткеи 1–4 и кнопка
@@ -410,6 +439,7 @@ function frameTick(now) {
   updateHero(smoothY);
   scrubA.update(smoothY);
   updateCasesParallax(smoothY);
+  updateTheme(smoothY);
   updateProgressRail(smoothY);
 
   if (diff < 0.4) {
@@ -438,6 +468,7 @@ if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     updateHero(smoothY);
     scrubA.update(smoothY);
     updateCasesParallax(smoothY);
+    updateTheme(smoothY);
     updateProgressRail(smoothY);
   }, { passive: true });
 }
