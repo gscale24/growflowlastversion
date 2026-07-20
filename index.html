@@ -15,15 +15,20 @@
 
 <!--
   ═══════════════════════════════════════════════════════════
-  ВНИМАНИЕ: кадры сцен A/C и hero-видео — временная референсная
-  съёмка для обкатки scroll-scrubbing механики (см. README).
-  Заменить на финальные материалы перед публикацией:
-  assets/frames/sceneA (40), sceneC (50), assets/hero.mp4.
-  Сцена B («Услуги») — белый экран без видео, объект справа —
-  плейсхолдер под предметную съёмку (см. .services-object).
-  Сцена C — телефон-мокап поверх кадров, имитация до реальной съёмки.
+  ВНИМАНИЕ: единственное видео на сайте — hero/outro (assets/hero.mp4).
+  Остальные секции — обычный поток без видео, фон чередует светлую и
+  тёмную темы (см. [data-theme] в css/style.css) и плавно перекрашивается
+  через #bgLayer при скролле. Карточки-плейсхолдеры в услугах (.service-object)
+  ждут реальной предметной съёмки. Телефон-мокап в контактах — концепт,
+  заменить на съёмку.
   ═══════════════════════════════════════════════════════════
 -->
+
+<!-- ================= ФОНОВЫЙ СЛОЙ ================= -->
+<!-- Один фиксированный слой на весь сайт — цвет плавно перекрашивается
+     JS-наблюдателем (см. js/main.js) при пересечении секций с разными
+     [data-theme], вместо резкой смены фона от блока к блоку. -->
+<div class="bg-layer" id="bgLayer"></div>
 
 <!-- ================= ПРЕЛОАДЕР ================= -->
 <div class="preloader" id="preloader">
@@ -60,79 +65,115 @@
   </div>
 </section>
 
-<!-- ================= SCENE A — посадка в кресло ================= -->
-<section class="scene" id="sceneA" style="--frames:40">
-  <div class="scene-sticky">
-    <canvas id="canvasA" width="480" height="854"></canvas>
-    <div class="scene-vignette"></div>
-
-    <div class="scene-copy scene-copy--A" data-reveal-from="0.55" data-reveal-to="0.85">
-      <span class="eyebrow">Как всё начиналось</span>
-      <h2>Мы садимся за стол так же, как и вы —<br>с чистого листа и списком дел, который никогда не кончается</h2>
-      <p>Grow Flow — команда стратегов, продюсеров и аналитиков. Мы не продаём «ведение соцсетей» — мы строим системы роста.</p>
-    </div>
-
-    <div class="scroll-more" data-show-after="0.9">
-      <span>Листай дальше, чтобы мы рассказали больше о нашей работе</span>
-      <div class="scroll-more-arrow">↓</div>
-    </div>
+<!-- ================= ЗНАКОМСТВО (ex. Сцена A) — обычный поток, светлая тема ================= -->
+<section class="chapter chapter--intro" id="sceneA" data-theme="light">
+  <div class="chapter-inner reveal-block" data-reveal>
+    <span class="eyebrow">Как всё начиналось</span>
+    <h2>Мы садимся за стол так же, как и вы —<br>с чистого листа и списком дел, который никогда не кончается</h2>
+    <p>Grow Flow — команда стратегов, продюсеров и аналитиков. Мы не продаём «ведение соцсетей» — мы строим системы роста.</p>
   </div>
 </section>
 
-<!-- ================= SCENE B — услуги: белый экран, чёрный текст
-     (по образцу секции SERVICES на kookie-kollective.com — разрыв палитры
-     посреди тёмного сайта, без видео-фона) ================= -->
-<section class="scene scene--services" id="sceneB">
-  <div class="scene-sticky">
-    <div class="services-frame">
+<!-- ================= УСЛУГИ — обычный поток, карточки идут одна за другой,
+     фон чередует светлую/тёмную тему (разрыв палитры, как на
+     kookie-kollective.com), тонкая вкладка-рейл прилипает сбоку ================= -->
+<section class="services-group" id="sceneB">
 
-      <div class="services-topbar">
-        <span class="services-index">01<i></i>Услуги</span>
-        <span class="services-brand">Grow Flow<b>+</b></span>
-      </div>
+  <div class="services-groupbar services-groupbar--top">
+    <span class="services-index">02<i></i>Услуги</span>
+    <span class="services-brand">Grow Flow<b>+</b></span>
+  </div>
 
-      <!-- вертикальная навигация-вкладки слева; активная получает скобки [ ] через CSS -->
-      <nav class="services-tabs" id="servicesTabs" aria-label="Категории услуг">
-        <button class="services-tab" data-segment="0" data-service="smm" type="button">SMM</button>
-        <button class="services-tab" data-segment="1" data-service="performance" type="button">Таргет</button>
-        <button class="services-tab" data-segment="2" data-service="seo" type="button">SEO</button>
-        <button class="services-tab" data-segment="3" data-service="production" type="button">Продакшн</button>
-      </nav>
+  <div class="services-grid">
+    <nav class="services-tabs-rail" id="servicesTabs" aria-label="Категории услуг">
+      <button class="services-tab" data-service="smm" type="button">SMM</button>
+      <button class="services-tab" data-service="performance" type="button">Таргет</button>
+      <button class="services-tab" data-service="seo" type="button">SEO</button>
+      <button class="services-tab" data-service="production" type="button">Продакшн</button>
+    </nav>
 
-      <!-- гигантское слово активной категории: непрерывный параллакс-переход,
-           привязанный к скроллу — «уходящее» слово и «входящее» едут
-           навстречу друг другу вместо мгновенной подмены -->
-      <div class="services-headline-wrap">
-        <h2 class="services-headline services-headline--out" id="servicesHeadlineOut">SMM</h2>
-        <h2 class="services-headline services-headline--in" id="servicesHeadlineIn">Таргет</h2>
-      </div>
+    <div class="services-blocks">
 
-      <!-- описание + состав работ активной категории -->
-      <div class="services-copy" id="servicesCopy">
-        <p class="services-desc" id="servicesDesc">Строим сообщество вокруг бренда: от контент-плана и визуального языка до ежедневной модерации и роста живой аудитории.</p>
-        <p class="services-tagline">Каждая услуга — законченная система, а не разовая настройка.</p>
-        <ul class="services-scope" id="servicesScope"></ul>
-        <button class="services-more" id="servicesMore" type="button">Подробнее о составе работ <span class="link-arrow-icon">↗</span></button>
-      </div>
-
-      <!-- предметный объект справа: честный плейсхолдер вместо видео —
-           заменить на реальную предметную съёмку -->
-      <div class="services-object" id="servicesObject" aria-hidden="true">
-        <div class="services-object-card">
-          <span class="services-object-logo">GF</span>
-          <span class="services-object-line"></span>
-          <span class="services-object-word" id="servicesObjectWord">SMM</span>
+      <article class="service-block reveal-block" id="service-smm" data-service="smm" data-theme="light" data-reveal>
+        <div class="service-block-inner">
+          <span class="service-num">01</span>
+          <h2 class="service-word">SMM</h2>
+          <p class="service-desc">Строим сообщество вокруг бренда: от контент-плана и визуального языка до ежедневной модерации и роста живой аудитории.</p>
+          <p class="service-tagline">Каждая услуга — законченная система, а не разовая настройка.</p>
+          <button class="service-more" data-service="smm" type="button">Подробнее о составе работ <span class="link-arrow-icon">↗</span></button>
         </div>
-        <span class="services-object-tag">Место для предметной съёмки</span>
-      </div>
+        <div class="service-object" aria-hidden="true">
+          <div class="service-object-card">
+            <span class="service-object-logo">GF</span>
+            <span class="service-object-line"></span>
+            <span class="service-object-word">SMM</span>
+          </div>
+          <span class="service-object-tag">Место для предметной съёмки</span>
+        </div>
+      </article>
 
-      <div class="services-bottombar">
-        <span class="services-hint">Скролль, чтобы листать услуги</span>
-        <span class="services-rec"><i></i>REC</span>
-      </div>
+      <article class="service-block reveal-block" id="service-performance" data-service="performance" data-theme="dark" data-reveal>
+        <div class="service-block-inner">
+          <span class="service-num">02</span>
+          <h2 class="service-word">Таргет</h2>
+          <p class="service-desc">Настраиваем связку трафик → лид → продажа и держим её под постоянной оптимизацией по цифрам.</p>
+          <p class="service-tagline">Каждая услуга — законченная система, а не разовая настройка.</p>
+          <button class="service-more" data-service="performance" type="button">Подробнее о составе работ <span class="link-arrow-icon">↗</span></button>
+        </div>
+        <div class="service-object" aria-hidden="true">
+          <div class="service-object-card">
+            <span class="service-object-logo">GF</span>
+            <span class="service-object-line"></span>
+            <span class="service-object-word">Таргет</span>
+          </div>
+          <span class="service-object-tag">Место для предметной съёмки</span>
+        </div>
+      </article>
+
+      <article class="service-block reveal-block" id="service-seo" data-service="seo" data-theme="light" data-reveal>
+        <div class="service-block-inner">
+          <span class="service-num">03</span>
+          <h2 class="service-word">SEO</h2>
+          <p class="service-desc">Выводим сайты в топ выдачи: техническая оптимизация, семантическое ядро и контент, который отвечает на реальные запросы.</p>
+          <p class="service-tagline">Каждая услуга — законченная система, а не разовая настройка.</p>
+          <button class="service-more" data-service="seo" type="button">Подробнее о составе работ <span class="link-arrow-icon">↗</span></button>
+        </div>
+        <div class="service-object" aria-hidden="true">
+          <div class="service-object-card">
+            <span class="service-object-logo">GF</span>
+            <span class="service-object-line"></span>
+            <span class="service-object-word">SEO</span>
+          </div>
+          <span class="service-object-tag">Место для предметной съёмки</span>
+        </div>
+      </article>
+
+      <article class="service-block reveal-block" id="service-production" data-service="production" data-theme="dark" data-reveal>
+        <div class="service-block-inner">
+          <span class="service-num">04</span>
+          <h2 class="service-word">Продакшн</h2>
+          <p class="service-desc">Съёмки, монтаж и моушн-дизайн под каждую площадку — от вертикальных reels до имиджевых роликов.</p>
+          <p class="service-tagline">Каждая услуга — законченная система, а не разовая настройка.</p>
+          <button class="service-more" data-service="production" type="button">Подробнее о составе работ <span class="link-arrow-icon">↗</span></button>
+        </div>
+        <div class="service-object" aria-hidden="true">
+          <div class="service-object-card">
+            <span class="service-object-logo">GF</span>
+            <span class="service-object-line"></span>
+            <span class="service-object-word">Продакшн</span>
+          </div>
+          <span class="service-object-tag">Место для предметной съёмки</span>
+        </div>
+      </article>
 
     </div>
   </div>
+
+  <div class="services-groupbar services-groupbar--bottom">
+    <span class="services-hint">Скролль дальше</span>
+    <span class="services-rec"><i></i>REC</span>
+  </div>
+
 </section>
 
 <!-- модалка деталей услуги -->
@@ -146,30 +187,9 @@
   </div>
 </div>
 
-<!-- ================= SCENE C — заметки + мокап телефона ================= -->
-<section class="scene scene--contact" id="sceneC" style="--frames:50">
-  <div class="scene-sticky">
-    <canvas id="canvasC" width="480" height="854"></canvas>
-    <div class="scene-vignette"></div>
-
-    <!-- концепт-мокап телефона: живой текст поверх кадра, синхронный с полями формы -->
-    <div class="phone-mock" id="phoneMock" aria-hidden="true">
-      <span class="phone-mock-tag">Концепт · заменить на съёмку</span>
-      <div class="phone-mock-body">
-        <div class="phone-mock-notch"></div>
-        <div class="phone-mock-screen" id="phoneMockScreen">
-          <div class="phone-mock-field">
-            <span class="phone-mock-label">Имя</span>
-            <p class="phone-mock-text" id="phoneMockName"></p>
-          </div>
-          <div class="phone-mock-field">
-            <span class="phone-mock-label">Что нужно сделать</span>
-            <p class="phone-mock-text" id="phoneMockMessage"></p>
-          </div>
-          <span class="phone-mock-check">✓ Отправлено</span>
-        </div>
-      </div>
-    </div>
+<!-- ================= КОНТАКТЫ (ex. Сцена C) — обычный поток, тёмная тема ================= -->
+<section class="chapter chapter--contact" id="sceneC" data-theme="dark">
+  <div class="chapter-inner contact-inner reveal-block" data-reveal>
 
     <div class="contact-panel">
       <span class="eyebrow">Обсудить проект</span>
@@ -190,6 +210,26 @@
         </button>
       </form>
     </div>
+
+    <!-- концепт-мокап телефона: живой текст, синхронный с полями формы -->
+    <div class="phone-mock" id="phoneMock" aria-hidden="true">
+      <span class="phone-mock-tag">Концепт · заменить на съёмку</span>
+      <div class="phone-mock-body">
+        <div class="phone-mock-notch"></div>
+        <div class="phone-mock-screen" id="phoneMockScreen">
+          <div class="phone-mock-field">
+            <span class="phone-mock-label">Имя</span>
+            <p class="phone-mock-text" id="phoneMockName"></p>
+          </div>
+          <div class="phone-mock-field">
+            <span class="phone-mock-label">Что нужно сделать</span>
+            <p class="phone-mock-text" id="phoneMockMessage"></p>
+          </div>
+          <span class="phone-mock-check">✓ Отправлено</span>
+        </div>
+      </div>
+    </div>
+
   </div>
 </section>
 

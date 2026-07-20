@@ -1,132 +1,31 @@
 /* ============ ТОЧКИ ПОДКЛЮЧЕНИЯ МЕДИА ============
-   Подставьте свои файлы. Кадры сцен — assets/frames/sceneX/f_NNN.jpg. */
+   Единственное видео на сайте — hero/outro. Остальные секции идут
+   обычным потоком без картинки, фон переключают [data-theme]. */
 const HERO_VIDEO_URL = "assets/hero.mp4";
 const OUTRO_VIDEO_URL = "assets/hero.mp4"; // видео внутри финальной надписи — можно указать своё
 
-const SCENES_META = {
-  sceneA: { frames: 40, folder: 'assets/frames/sceneA' },
-  sceneC: { frames: 50, folder: 'assets/frames/sceneC' },
-};
-const TOTAL_FRAMES = SCENES_META.sceneA.frames + SCENES_META.sceneC.frames;
-
 /* ==================================================================
-   ПРЕЛОАДЕР — агрегированный прогресс по всем кадрам сцен
+   ПРЕЛОАДЕР — на сайте больше нет тяжёлых JPEG-последовательностей,
+   ждать нечего кроме hero-видео, так что прогресс упрощён: быстро
+   доезжаем до ~92%, добираем до 100% по готовности видео или по таймауту.
    ================================================================== */
-let loadedFramesTotal = 0;
 const preloaderEl = document.getElementById('preloader');
 const preloaderFill = document.getElementById('preloaderFill');
 const preloaderPct = document.getElementById('preloaderPct');
-
-function bumpPreloader() {
-  loadedFramesTotal++;
-  const pct = Math.min(100, Math.round((loadedFramesTotal / TOTAL_FRAMES) * 100));
-  preloaderFill.style.width = pct + '%';
-  preloaderPct.textContent = pct + '%';
-  if (loadedFramesTotal >= TOTAL_FRAMES) finishPreloader();
-}
 let preloaderDone = false;
 function finishPreloader() {
   if (preloaderDone) return;
   preloaderDone = true;
+  preloaderFill.style.width = '100%';
+  preloaderPct.textContent = '100%';
   preloaderEl.classList.add('is-done');
   document.getElementById('progressRail').classList.add('is-visible');
 }
-// подстраховка: не держим прелоадер вечно, если что-то не догрузилось
-setTimeout(finishPreloader, 6000);
-
-/* ==================================================================
-   SCROLL-SCRUBBING ENGINE
-   Секция высотой N*100vh содержит sticky-канвас. Прогресс скролла
-   внутри секции (0..1) мапится на индекс кадра.
-   ================================================================== */
-function makeScrubber({ sectionEl, canvasEl, frameCount, frameFolder, frameDigits = 3, onProgress }) {
-  const ctx = canvasEl.getContext('2d', { alpha: false });
-  const images = new Array(frameCount);
-  let currentFrame = -1;
-  let lastBlendKey = null;
-  let sizedW = 0, sizedH = 0;
-
-  function frameSrc(i) {
-    const n = String(i + 1).padStart(frameDigits, '0');
-    return `${frameFolder}/f_${n}.jpg`;
-  }
-
-  for (let i = 0; i < frameCount; i++) {
-    const img = new Image();
-    img.src = frameSrc(i);
-    img.onload = () => { bumpPreloader(); if (i === 0) drawFrame(0); };
-    img.onerror = () => { bumpPreloader(); };
-    images[i] = img;
-  }
-
-  // канвас ресайзится (и очищается) только если размер реально изменился —
-  // назначение canvas.width/height на каждый тик — дорогая операция и
-  // была главной причиной проседания кадров при скролле
-  function ensureSize(img) {
-    if (sizedW !== img.naturalWidth || sizedH !== img.naturalHeight) {
-      sizedW = img.naturalWidth;
-      sizedH = img.naturalHeight;
-      canvasEl.width = sizedW;
-      canvasEl.height = sizedH;
-    }
-  }
-
-  // точный кадр без интерполяции — для статичных удержаний (например, во время печати)
-  function drawFrame(index) {
-    index = Math.max(0, Math.min(frameCount - 1, Math.round(index)));
-    if (index === currentFrame && lastBlendKey === null) return;
-    const img = images[index];
-    if (!img || !img.complete || img.naturalWidth === 0) return;
-    currentFrame = index;
-    lastBlendKey = null;
-    ensureSize(img);
-    ctx.globalAlpha = 1;
-    ctx.drawImage(img, 0, 0);
-  }
-
-  // дробный индекс кадра — рисует соседний кадр поверх текущего с альфой
-  // по дробной части, сглаживая переход между дискретными JPEG-кадрами
-  function drawFrameBlended(floatIndex) {
-    floatIndex = Math.max(0, Math.min(frameCount - 1, floatIndex));
-    const lo = Math.floor(floatIndex);
-    const hi = Math.min(frameCount - 1, lo + 1);
-    const frac = floatIndex - lo;
-    const key = lo + '_' + frac.toFixed(3);
-    if (key === lastBlendKey) return;
-    const imgLo = images[lo];
-    if (!imgLo || !imgLo.complete || imgLo.naturalWidth === 0) return;
-    lastBlendKey = key;
-    currentFrame = lo;
-    ensureSize(imgLo);
-    ctx.globalAlpha = 1;
-    ctx.drawImage(imgLo, 0, 0);
-    if (frac > 0.008 && hi !== lo) {
-      const imgHi = images[hi];
-      if (imgHi && imgHi.complete && imgHi.naturalWidth > 0) {
-        ctx.globalAlpha = frac;
-        ctx.drawImage(imgHi, 0, 0);
-        ctx.globalAlpha = 1;
-      }
-    }
-  }
-
-  function getProgress(scrollPos) {
-    const total = sectionEl.offsetHeight - window.innerHeight;
-    if (total <= 0) return 0;
-    const p = (scrollPos - sectionEl.offsetTop) / total;
-    return Math.max(0, Math.min(1, p));
-  }
-
-  function update(scrollPos) {
-    const p = getProgress(scrollPos);
-    const floatIndex = p * (frameCount - 1);
-    drawFrameBlended(floatIndex);
-    if (onProgress) onProgress(p, Math.round(floatIndex));
-    return p;
-  }
-
-  return { update, drawFrame, drawFrameBlended, getProgress, frameCount };
-}
+requestAnimationFrame(() => {
+  preloaderFill.style.width = '92%';
+  preloaderPct.textContent = '92%';
+});
+setTimeout(finishPreloader, 1400);
 
 /* ==================================================================
    HERO ВИДЕО
@@ -139,173 +38,89 @@ function makeScrubber({ sectionEl, canvasEl, frameCount, frameFolder, frameDigit
   video.classList.add('is-on');
   fallback.style.display = 'none';
   video.play().catch(() => {});
+  video.addEventListener('loadeddata', finishPreloader);
   video.addEventListener('error', () => {
     video.classList.remove('is-on');
     fallback.style.display = '';
+    finishPreloader();
   });
 })();
 
 /* ==================================================================
-   SCENE A — посадка в кресло + reveal текста
+   ФОН СЕКЦИЙ — общий фиксированный слой плавно перекрашивается, когда
+   середина вьюпорта пересекает секцию с другой [data-theme], вместо
+   резкой смены цвета на границе блока. Тем же наблюдателем подсвечиваем
+   активную вкладку услуги, когда в фокусе конкретная карточка.
    ================================================================== */
-const sceneAEl = document.getElementById('sceneA');
-const scrubA = makeScrubber({
-  sectionEl: sceneAEl,
-  canvasEl: document.getElementById('canvasA'),
-  frameCount: SCENES_META.sceneA.frames,
-  frameFolder: SCENES_META.sceneA.folder,
-  onProgress(p) {
-    const copy = document.querySelector('.scene-copy--A');
-    const from = parseFloat(copy.dataset.revealFrom);
-    const to = parseFloat(copy.dataset.revealTo);
-    copy.classList.toggle('is-visible', p >= from && p <= to + 0.15);
+const bgLayer = document.getElementById('bgLayer');
+const THEME_COLORS = { light: '#f2efe7', dark: '#0a0a0a' };
+const serviceTabs = Array.from(document.querySelectorAll('.services-tab'));
 
-    const more = document.querySelector('.scroll-more');
-    more.classList.toggle('is-visible', p >= 0.9);
-  }
-});
+const themeObserver = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    if (!entry.isIntersecting) return;
+    const theme = entry.target.dataset.theme;
+    if (theme && THEME_COLORS[theme]) bgLayer.style.backgroundColor = THEME_COLORS[theme];
+    const service = entry.target.dataset.service;
+    if (service) {
+      serviceTabs.forEach((tab) => tab.classList.toggle('is-active', tab.dataset.service === service));
+    }
+  });
+}, { rootMargin: '-50% 0px -50% 0px', threshold: 0 });
+document.querySelectorAll('[data-theme]').forEach((el) => themeObserver.observe(el));
 
 /* ==================================================================
-   SCENE B — услуги вкладками, скролл переключает активную категорию
+   REVEAL-ПО-СКРОЛЛУ — карточки/блоки плавно "разворачиваются" при
+   входе в вьюпорт, один раз, дальше не трогаем.
+   ================================================================== */
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('is-visible');
+      revealObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.18, rootMargin: '0px 0px -8% 0px' });
+document.querySelectorAll('[data-reveal]').forEach((el) => revealObserver.observe(el));
+
+/* ==================================================================
+   УСЛУГИ — вкладки скроллят к своей карточке; хоткеи 1–4 и кнопка
+   «Подробнее» открывают модалку с полным составом работ.
    ================================================================== */
 const serviceData = {
   smm: {
-    num: '01', title: 'SMM и комьюнити', word: 'SMM',
+    num: '01', title: 'SMM и комьюнити',
     desc: 'Строим сообщество вокруг бренда: от контент-плана и визуального языка до ежедневной модерации и роста живой аудитории.',
     scope: ['Контент-стратегия и рубрикатор', 'Съёмка и дизайн постов', 'Модерация и работа с комьюнити', 'Ежемесячная аналитика вовлечённости']
   },
   performance: {
-    num: '02', title: 'Performance и таргет', word: 'Таргет',
+    num: '02', title: 'Performance и таргет',
     desc: 'Настраиваем связку трафик → лид → продажа и держим её под постоянной оптимизацией по цифрам.',
     scope: ['Настройка рекламных кабинетов', 'A/B тестирование креативов', 'Сквозная аналитика и CRM-интеграция', 'Еженедельная оптимизация ставок']
   },
   seo: {
-    num: '03', title: 'SEO-продвижение', word: 'SEO',
+    num: '03', title: 'SEO-продвижение',
     desc: 'Выводим сайты в топ выдачи: техническая оптимизация, семантическое ядро и контент, который отвечает на реальные запросы.',
     scope: ['Технический аудит и исправления', 'Сбор семантического ядра', 'SEO-контент и внутренняя перелинковка', 'Ежемесячный отчёт по позициям']
   },
   production: {
-    num: '04', title: 'Контент-продакшн', word: 'Продакшн',
+    num: '04', title: 'Контент-продакшн',
     desc: 'Съёмки, монтаж и моушн-дизайн под каждую площадку — от вертикальных reels до имиджевых роликов.',
     scope: ['Сценарий и раскадровка', 'Съёмочный день под ключ', 'Монтаж и цветокоррекция', 'Адаптация под форматы площадок']
   }
 };
 
-const sceneBEl = document.getElementById('sceneB');
-const servicesObjectEl = document.getElementById('servicesObject');
-const servicesObjectWord = document.getElementById('servicesObjectWord');
-const serviceTabs = Array.from(document.querySelectorAll('.services-tab'));
-const SEGMENTS = serviceTabs.length;
-const serviceWords = serviceTabs.map(tab => serviceData[tab.dataset.service].word);
-const headlineOut = document.getElementById('servicesHeadlineOut');
-const headlineIn = document.getElementById('servicesHeadlineIn');
-const servicesDesc = document.getElementById('servicesDesc');
-const servicesScope = document.getElementById('servicesScope');
-const servicesMore = document.getElementById('servicesMore');
-let activeServiceKey = serviceTabs[0].dataset.service;
-
-function renderServiceCopy(key) {
-  const data = serviceData[key];
-  if (!data) return;
-  servicesDesc.textContent = data.desc;
-  servicesScope.innerHTML = '';
-  data.scope.forEach(line => {
-    const li = document.createElement('li');
-    li.textContent = line;
-    servicesScope.appendChild(li);
-  });
-}
-renderServiceCopy(activeServiceKey);
-serviceTabs[0].classList.add('is-active');
-
-// заголовок теперь занимает только левую половину экрана (справа — объект),
-// поэтому длинные слова вроде «Продакшн» нужно вписывать по ширине —
-// меряем реальную ширину текста на офскрин-канвасе и подбираем кегль
-const headlineWrapEl = document.querySelector('.services-headline-wrap');
-const headlineMeasureCtx = document.createElement('canvas').getContext('2d');
-let headlineFitCache = {};
-function fitHeadlineText(el, word) {
-  if (headlineFitCache[word] === undefined) {
-    const maxWidth = headlineWrapEl.clientWidth;
-    const maxHeight = headlineWrapEl.clientHeight;
-    let size = maxHeight;
-    headlineMeasureCtx.font = `800 ${size}px ${getComputedStyle(el).fontFamily}`;
-    const width = headlineMeasureCtx.measureText(word).width;
-    if (width > 0) size = Math.min(size, size * (maxWidth * 0.86) / width);
-    headlineFitCache[word] = Math.max(28, Math.round(size));
-  }
-  el.textContent = word;
-  el.style.fontSize = headlineFitCache[word] + 'px';
-}
-window.addEventListener('resize', () => { headlineFitCache = {}; });
-// на момент первого замера жирное начертание Inter 800 могло ещё не
-// догрузиться — канвас-измерение тогда идёт по узкому фолбэк-шрифту,
-// и после реальной загрузки шрифта слово перестаёт помещаться;
-// сбрасываем кеш и пересчитываем размеры, когда шрифты точно готовы
-Promise.race([
-  document.fonts ? document.fonts.ready : Promise.resolve(),
-  new Promise(resolve => setTimeout(resolve, 1500)),
-]).then(() => {
-  headlineFitCache = {};
-  fitHeadlineText(headlineOut, headlineOut.textContent);
-  fitHeadlineText(headlineIn, headlineIn.textContent);
-});
-
-fitHeadlineText(headlineOut, serviceWords[0]);
-fitHeadlineText(headlineIn, serviceWords[Math.min(1, SEGMENTS - 1)]);
-
-// плавная кривая ease-in-out для перехода внутри сегмента
-function smoothstep(t) { return t * t * (3 - 2 * t); }
-
-function getSectionProgress(sectionEl, scrollPos) {
-  const total = sectionEl.offsetHeight - window.innerHeight;
-  if (total <= 0) return 0;
-  const p = (scrollPos - sectionEl.offsetTop) / total;
-  return Math.max(0, Math.min(1, p));
-}
-
-// без видео-фона сцена больше не нуждается в makeScrubber — прогресс
-// секции считается напрямую и управляет только вкладками/заголовком/объектом
-function updateServicesScene(scrollPos) {
-  const p = getSectionProgress(sceneBEl, scrollPos);
-  const segFloat = Math.min(SEGMENTS - 0.0001, Math.max(0, p * SEGMENTS));
-  const segIndex = Math.floor(segFloat);
-  const nextIndex = Math.min(SEGMENTS - 1, segIndex + 1);
-  const frac = smoothstep(segFloat - segIndex);
-
-  // непрерывный "перелистывающий" параллакс гигантского слова —
-  // уходящее слово едет вверх и гаснет, входящее едет снизу навстречу,
-  // оба напрямую следуют за скроллом, без transition и рывков
-  fitHeadlineText(headlineOut, serviceWords[segIndex]);
-  fitHeadlineText(headlineIn, serviceWords[nextIndex]);
-  headlineOut.style.transform = `translateY(${(-frac * 55).toFixed(1)}%)`;
-  headlineOut.style.opacity = String(Math.max(0, 1 - frac * 1.2));
-  headlineIn.style.transform = `translateY(${((1 - frac) * 55).toFixed(1)}%)`;
-  headlineIn.style.opacity = String(frac);
-
-  // лёгкий наклон предметной карточки вслед за перелистыванием слова
-  const tilt = (frac - 0.5) * 10;
-  servicesObjectEl.style.transform = `translateY(-50%) rotate(${tilt.toFixed(1)}deg)`;
-  servicesObjectWord.textContent = serviceWords[frac < 0.5 ? segIndex : nextIndex];
-
-  const key = serviceTabs[segIndex].dataset.service;
-  if (key !== activeServiceKey) {
-    activeServiceKey = key;
-    serviceTabs.forEach((tab, i) => tab.classList.toggle('is-active', i === segIndex));
-    renderServiceCopy(key);
-  }
-}
-
-// клик по вкладке — плавно скроллит к соответствующему участку сцены
-serviceTabs.forEach((tab, i) => {
+// клик по вкладке — скроллит к соответствующей карточке услуги
+serviceTabs.forEach((tab) => {
   tab.addEventListener('click', () => {
-    const total = sceneBEl.offsetHeight - window.innerHeight;
-    const targetP = (i + 0.5) / SEGMENTS;
-    window.scrollTo({ top: sceneBEl.offsetTop + total * targetP, behavior: 'smooth' });
+    const block = document.getElementById('service-' + tab.dataset.service);
+    if (block) block.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 });
 
-servicesMore.addEventListener('click', () => openServiceModal(activeServiceKey));
+document.querySelectorAll('.service-more').forEach((btn) => {
+  btn.addEventListener('click', () => openServiceModal(btn.dataset.service));
+});
 
 // хоткеи 1–4 — быстрый переход к описанию услуги
 window.addEventListener('keydown', (e) => {
@@ -324,7 +139,7 @@ function openServiceModal(key) {
   document.getElementById('modalDesc').textContent = data.desc;
   const scopeEl = document.getElementById('modalScope');
   scopeEl.innerHTML = '';
-  data.scope.forEach(line => {
+  data.scope.forEach((line) => {
     const li = document.createElement('li');
     li.textContent = line;
     scopeEl.appendChild(li);
@@ -336,36 +151,13 @@ modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList
 window.addEventListener('keydown', (e) => { if (e.key === 'Escape') modal.classList.remove('is-open'); });
 
 /* ==================================================================
-   SCENE C — заметки (скролл поднимает кадр), дальше —
-   мокап телефона с живым текстом, синхронным вводу в форме
+   КОНТАКТЫ — телефон-мокап: живой текст, синхронный вводу в форме
+   (сам мокап появляется вместе с реveal-блоком секции через CSS).
    ================================================================== */
-const sceneCEl = document.getElementById('sceneC');
-const TOTAL_C = SCENES_META.sceneC.frames;
-const RAISE_FRAMES = 34;      // 0..33 — сцена разворачивается по скроллу
-const SETTLE_FRAME = TOTAL_C - 1; // финальный статичный кадр на время ввода
-
-const phoneMock = document.getElementById('phoneMock');
-const phoneMockBody = phoneMock.querySelector('.phone-mock-body');
+const phoneMockBody = document.querySelector('.phone-mock-body');
 const phoneMockScreen = document.getElementById('phoneMockScreen');
 const phoneMockName = document.getElementById('phoneMockName');
 const phoneMockMessage = document.getElementById('phoneMockMessage');
-
-const scrubC = makeScrubber({
-  sectionEl: sceneCEl,
-  canvasEl: document.getElementById('canvasC'),
-  frameCount: TOTAL_C,
-  frameFolder: SCENES_META.sceneC.folder,
-  onProgress(p) {
-    const typingPhase = p >= 0.68;
-    phoneMock.classList.toggle('is-visible', typingPhase);
-    if (!typingPhase) {
-      const raiseP = Math.min(1, p / 0.68);
-      scrubC.drawFrameBlended(raiseP * (RAISE_FRAMES - 1));
-    } else {
-      scrubC.drawFrame(SETTLE_FRAME);
-    }
-  }
-});
 
 function renderPhoneMock() {
   const active = document.activeElement;
@@ -406,7 +198,7 @@ contactForm.addEventListener('submit', (e) => {
 });
 
 /* ==================================================================
-   HERO → SCENE A переход (кроссфейд по первым 100vh скролла)
+   HERO → следующая секция (кроссфейд по первым 100vh скролла)
    ================================================================== */
 const heroEl = document.getElementById('hero');
 function updateHero(scrollPos) {
@@ -420,7 +212,13 @@ function updateHero(scrollPos) {
    ================================================================== */
 const progressFill = document.getElementById('progressFill');
 const railStops = Array.from(document.querySelectorAll('.progress-rail-stops li'));
-const stopSections = { hero: heroEl, sceneA: sceneAEl, sceneB: sceneBEl, sceneC: sceneCEl, outro: document.getElementById('outro') };
+const stopSections = {
+  hero: heroEl,
+  sceneA: document.getElementById('sceneA'),
+  sceneB: document.getElementById('sceneB'),
+  sceneC: document.getElementById('sceneC'),
+  outro: document.getElementById('outro'),
+};
 
 function updateProgressRail(scrollPos) {
   const docHeight = document.body.scrollHeight - window.innerHeight;
@@ -437,10 +235,9 @@ function updateProgressRail(scrollPos) {
 /* ==================================================================
    MAIN SCROLL LOOP — сглаженный скролл (lerp, независимый от FPS)
    Реальная позиция скролла (window.scrollY) плавно "догоняется"
-   виртуальным значением smoothY. Коэффициент сглаживания считается по
-   реально прошедшему времени (performance.now), а не за "тик" — иначе
-   при просадке кадров (например, из-за перерисовки канваса) сглаживание
-   само становится источником рывков.
+   виртуальным значением smoothY, коэффициент сглаживания считается по
+   реально прошедшему времени, а не за "тик" — так эффект не зависит
+   от частоты кадров.
    ================================================================== */
 const SMOOTH_HALFLIFE_MS = 55; // за это время разрыв между smoothY и целью уменьшается вдвое
 let smoothY = window.scrollY;
@@ -457,9 +254,6 @@ function frameTick(now) {
   if (diff < 0.4) smoothY = targetY;
 
   updateHero(smoothY);
-  scrubA.update(smoothY);
-  updateServicesScene(smoothY);
-  scrubC.update(smoothY);
   updateProgressRail(smoothY);
 
   if (diff < 0.4) {
@@ -486,9 +280,6 @@ if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
   window.addEventListener('scroll', () => {
     smoothY = window.scrollY;
     updateHero(smoothY);
-    scrubA.update(smoothY);
-    updateServicesScene(smoothY);
-    scrubC.update(smoothY);
     updateProgressRail(smoothY);
   }, { passive: true });
 }
