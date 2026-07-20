@@ -68,16 +68,15 @@ function makeScrubber({ sectionEl, canvasEl, frameCount, frameFolder, frameDigit
     ctx.drawImage(img, 0, 0);
   }
 
-  function getProgress() {
-    const rect = sectionEl.getBoundingClientRect();
+  function getProgress(scrollPos) {
     const total = sectionEl.offsetHeight - window.innerHeight;
     if (total <= 0) return 0;
-    const p = (-rect.top) / total;
+    const p = (scrollPos - sectionEl.offsetTop) / total;
     return Math.max(0, Math.min(1, p));
   }
 
-  function update() {
-    const p = getProgress();
+  function update(scrollPos) {
+    const p = getProgress(scrollPos);
     const frameIndex = Math.floor(p * (frameCount - 1));
     drawFrame(frameIndex);
     if (onProgress) onProgress(p, frameIndex);
@@ -214,9 +213,9 @@ const SETTLE_FRAME = TOTAL_C - 1; // финальный статичный ка�
 
 const phoneMock = document.getElementById('phoneMock');
 const phoneMockBody = phoneMock.querySelector('.phone-mock-body');
-const phoneMockScreen = phoneMock.querySelector('.phone-mock-screen');
-const phoneMockLabel = document.getElementById('phoneMockLabel');
-const phoneMockText = document.getElementById('phoneMockText');
+const phoneMockScreen = document.getElementById('phoneMockScreen');
+const phoneMockName = document.getElementById('phoneMockName');
+const phoneMockMessage = document.getElementById('phoneMockMessage');
 
 const scrubC = makeScrubber({
   sectionEl: sceneCEl,
@@ -236,12 +235,11 @@ const scrubC = makeScrubber({
 });
 
 function renderPhoneMock() {
-  const name = fieldName.value.trim();
-  const message = fieldMessage.value.trim();
   const active = document.activeElement;
-  const text = active === fieldMessage && message ? message : name;
-  phoneMockLabel.textContent = active === fieldMessage ? 'Что нужно сделать' : 'Как к вам обращаться';
-  phoneMockText.innerHTML = escapeHtml(text) + '<span class="phone-mock-cursor">|</span>';
+  const nameCursor = active === fieldName ? '<span class="phone-mock-cursor">|</span>' : '';
+  const msgCursor = active === fieldMessage ? '<span class="phone-mock-cursor">|</span>' : '';
+  phoneMockName.innerHTML = escapeHtml(fieldName.value) + nameCursor;
+  phoneMockMessage.innerHTML = escapeHtml(fieldMessage.value) + msgCursor;
 }
 function escapeHtml(s) {
   return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -271,12 +269,6 @@ contactForm.addEventListener('submit', (e) => {
     submitBtn.disabled = false;
     submitBtn.querySelector('.submit-label').textContent = 'Заявка отправлена ✓';
     phoneMockScreen.classList.add('is-sent');
-    if (!phoneMockScreen.querySelector('.phone-mock-check')) {
-      const check = document.createElement('span');
-      check.className = 'phone-mock-check';
-      check.innerHTML = '✓ Отправлено';
-      phoneMockScreen.appendChild(check);
-    }
   }, 900);
 });
 
@@ -284,8 +276,8 @@ contactForm.addEventListener('submit', (e) => {
    HERO → SCENE A переход (кроссфейд по первым 100vh скролла)
    ================================================================== */
 const heroEl = document.getElementById('hero');
-function updateHero() {
-  const p = Math.min(1, window.scrollY / window.innerHeight);
+function updateHero(scrollPos) {
+  const p = Math.min(1, scrollPos / window.innerHeight);
   heroEl.style.opacity = String(1 - p);
   heroEl.style.transform = `scale(${1 + p * 0.06})`;
 }
@@ -297,35 +289,66 @@ const progressFill = document.getElementById('progressFill');
 const railStops = Array.from(document.querySelectorAll('.progress-rail-stops li'));
 const stopSections = { hero: heroEl, sceneA: sceneAEl, sceneB: sceneBEl, sceneC: sceneCEl };
 
-function updateProgressRail() {
+function updateProgressRail(scrollPos) {
   const docHeight = document.body.scrollHeight - window.innerHeight;
-  const overall = docHeight > 0 ? window.scrollY / docHeight : 0;
+  const overall = docHeight > 0 ? scrollPos / docHeight : 0;
   progressFill.style.height = Math.min(100, Math.max(0, overall * 100)) + '%';
 
   let activeKey = 'hero';
   Object.entries(stopSections).forEach(([key, el]) => {
-    if (window.scrollY >= el.offsetTop - window.innerHeight * 0.5) activeKey = key;
+    if (scrollPos >= el.offsetTop - window.innerHeight * 0.5) activeKey = key;
   });
   railStops.forEach(li => li.classList.toggle('is-active', li.dataset.stop === activeKey));
 }
 
 /* ==================================================================
-   MAIN SCROLL LOOP
+   MAIN SCROLL LOOP — сглаженный скролл (lerp)
+   Реальная позиция скролла (window.scrollY) плавно "догоняется"
+   виртуальным значением smoothY, которое и управляет кадрами/парал­
+   лаксом. Даёт эффект инерции вместо жёсткой синхронизации 1:1.
    ================================================================== */
-let ticking = false;
-function onScroll() {
-  if (!ticking) {
-    requestAnimationFrame(() => {
-      updateHero();
-      scrubA.update();
-      scrubB.update();
-      scrubC.update();
-      updateProgressRail();
-      ticking = false;
-    });
-    ticking = true;
+const SMOOTH_FACTOR = 0.11;
+let smoothY = window.scrollY;
+let rafRunning = false;
+
+function frameTick() {
+  const targetY = window.scrollY;
+  smoothY += (targetY - smoothY) * SMOOTH_FACTOR;
+  const diff = Math.abs(targetY - smoothY);
+  if (diff < 0.4) smoothY = targetY;
+
+  updateHero(smoothY);
+  scrubA.update(smoothY);
+  scrubB.update(smoothY);
+  scrubC.update(smoothY);
+  updateProgressRail(smoothY);
+
+  if (diff < 0.4) {
+    rafRunning = false;
+  } else {
+    requestAnimationFrame(frameTick);
   }
 }
-window.addEventListener('scroll', onScroll, { passive: true });
-window.addEventListener('resize', onScroll);
-window.addEventListener('load', onScroll);
+function kickScroll() {
+  if (!rafRunning) {
+    rafRunning = true;
+    requestAnimationFrame(frameTick);
+  }
+}
+window.addEventListener('scroll', kickScroll, { passive: true });
+window.addEventListener('resize', kickScroll);
+window.addEventListener('load', kickScroll);
+kickScroll();
+
+if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  // без сглаживания — мгновенно синхронизируем с реальным скроллом
+  window.removeEventListener('scroll', kickScroll);
+  window.addEventListener('scroll', () => {
+    smoothY = window.scrollY;
+    updateHero(smoothY);
+    scrubA.update(smoothY);
+    scrubB.update(smoothY);
+    scrubC.update(smoothY);
+    updateProgressRail(smoothY);
+  }, { passive: true });
+}
