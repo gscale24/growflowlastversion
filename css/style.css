@@ -59,24 +59,38 @@ a{color:inherit;}
   position:fixed;inset:0;z-index:-1;pointer-events:none;
   opacity:0;
 }
+/* mix-blend-mode:screen вместо обычного alpha-over — три полупрозрачных
+   белых пятна, наложенных друг на друга обычным способом, в местах
+   перекрытия складывались в плоское светло-серое пятно (0.10+0.06+0.05
+   поверх тёмного фона реально давало ~0.14-0.2 яркости — заметно светлее
+   черного), из-за чего вся секция читалась пепельно-серой, а не чёрной,
+   как в референсе. Screen так не складывается, и сами значения снижены —
+   теперь это едва заметные блики на черном, а не серая заливка. */
 .cases-texture-glow{
   position:absolute;inset:-20%;
   background:
-    radial-gradient(ellipse 50% 40% at 28% 30%, rgba(255,255,255,0.10), transparent 60%),
-    radial-gradient(ellipse 45% 55% at 74% 55%, rgba(255,255,255,0.06), transparent 65%),
-    radial-gradient(ellipse 60% 50% at 48% 88%, rgba(255,255,255,0.05), transparent 70%);
+    radial-gradient(ellipse 50% 40% at 28% 30%, rgba(255,255,255,0.05), transparent 60%),
+    radial-gradient(ellipse 45% 55% at 74% 55%, rgba(255,255,255,0.032), transparent 65%),
+    radial-gradient(ellipse 60% 50% at 48% 88%, rgba(255,255,255,0.028), transparent 70%);
   filter:blur(46px);
+  mix-blend-mode:screen;
   animation:casesTextureDrift 18s ease-in-out infinite alternate;
 }
 @keyframes casesTextureDrift{
   from{transform:scale(1) rotate(0deg);}
   to{transform:scale(1.15) rotate(2deg);}
 }
+/* opacity:0.4 давал среднюю яркость патча ~46/255 — заметно светлее
+   чёрного (промерено сравнением скриншотов с/без зерна): feTurbulence
+   'fractalNoise' выдаёт непрозрачный шум со средней яркостью по каналу
+   ~0.5, и даже под overlay это не гасится так, как ожидалось на глаз —
+   на practике 0.06 держит ту же зернистую фактуру, но средняя яркость
+   патча ~17/255, то есть секция снова читается чёрной, а не пепельной. */
 .cases-texture-grain{
   position:absolute;inset:-10%;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size:160px 160px;
-  opacity:0.4;
+  opacity:0.06;
   mix-blend-mode:overlay;
   animation:casesGrainFlicker .5s steps(4) infinite;
 }
@@ -321,18 +335,29 @@ a{color:inherit;}
 .service-more:hover{color:var(--accent);border-color:var(--accent);}
 
 /* ---- предметный объект-плейсхолдер: честно подписан, ждёт реальной съёмки ----
-   Появление отдельное от .service-block (там transform уже занят
-   flex-раскладкой), поэтому обёртка .service-object отвечает за
-   направленный "провал"/"взлёт" по скроллу, а .service-object-card
-   внутри неё — за собственную анимацию покачивания (serviceObjectFloat),
-   чтобы transform двух уровней не спорили друг с другом. */
+   Три независимых слоя transform на трёх вложенных узлах, каждый — свой
+   источник движения, чтобы они не затирали друг друга:
+   .service-object       — направленный "провал"/"взлёт" при входе в
+                            вьюпорт (CSS transition, класс .is-visible);
+   .service-object-parallax — непрерывный скролл-параллакс ("ниспадающие
+                            картинки" — картинка едет медленнее/быстрее
+                            текста и всё время слегка "стекает" по мере
+                            скролла, а не только один раз при входе;
+                            updateServiceParallax в js/main.js, инлайновый
+                            style.transform, как у карточек «Кейсов»);
+   .service-object-card  — собственное покачивание (CSS-анимация
+                            serviceObjectFloat). */
 .service-object{
-  flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:14px;
+  flex:0 0 auto;
   opacity:0;transform:translateY(-90px);
   transition:opacity 1s var(--ease), transform 1s var(--ease);
 }
 .service-block[data-dir="up"] .service-object{transform:translateY(90px);}
 .service-block.is-visible .service-object{opacity:1;transform:translateY(0);}
+.service-object-parallax{
+  display:flex;flex-direction:column;align-items:center;gap:14px;
+  will-change:transform;
+}
 .service-object-card{
   width:clamp(140px,13vw,190px);aspect-ratio:3/4;
   border:1px solid var(--fg);border-radius:2px;background:var(--bg);

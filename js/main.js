@@ -505,6 +505,53 @@ if (!prefersNoParallax) {
 }
 
 /* ==================================================================
+   УСЛУГИ — «ниспадающие картинки»: непрерывный скролл-параллакс на
+   правой картинке-плейсхолдере (.service-object-parallax), той же
+   формулой, что и у карточек «Кейсов» выше. Независим от разового
+   направленного влёта при входе в вьюпорт (тот остаётся на
+   .service-object, CSS-transition) и от покачивания (то остаётся на
+   .service-object-card, CSS-animation) — три вложенных узла, три
+   независимых transform, ни один не затирает другой. Картинка не просто
+   один раз "влетает", а всё время слегка едет медленнее/быстрее текста
+   по мере скролла — оттого и читается как "ниспадающая", а не просто
+   разово появившаяся.
+   ================================================================== */
+const SERVICE_PARALLAX_SPEED = 0.1;
+// у карточек «Кейсов» тот же приём без ограничения работает нормально,
+// потому что доска карточек невысокая (сотни px) — там (centerY -
+// viewportCenter) физически не бывает огромным. Карточка услуги же
+// видна (opacity, is-visible) уже при пороге пересечения 15% — то есть
+// почти сразу, когда центр вьюпорта ещё далеко от центра всего блока
+// (min-height:86vh) — без ограничения множитель * дельту уносил
+// картинку на 200+px от своего текста, композиция разваливалась.
+// Клип держит эффект "стекает мимо текста при скролле", но не даёт
+// картинке оторваться от строки.
+const SERVICE_PARALLAX_MAX = 46;
+const serviceParallaxEls = Array.from(document.querySelectorAll('.service-object-parallax')).map(el => ({
+  el, centerY: 0,
+}));
+function measureServiceParallax() {
+  serviceParallaxEls.forEach(s => {
+    const rect = s.el.getBoundingClientRect();
+    s.centerY = rect.top + window.scrollY + rect.height / 2;
+  });
+}
+function updateServiceParallax(scrollPos) {
+  if (prefersNoParallax || !serviceParallaxEls.length) return;
+  const viewportCenter = scrollPos + window.innerHeight / 2;
+  serviceParallaxEls.forEach(s => {
+    const raw = (s.centerY - viewportCenter) * SERVICE_PARALLAX_SPEED;
+    const offset = Math.max(-SERVICE_PARALLAX_MAX, Math.min(SERVICE_PARALLAX_MAX, raw));
+    s.el.style.transform = `translateY(${offset.toFixed(1)}px)`;
+  });
+}
+if (!prefersNoParallax) {
+  measureServiceParallax();
+  window.addEventListener('resize', measureServiceParallax);
+  window.addEventListener('load', measureServiceParallax);
+}
+
+/* ==================================================================
    КЕЙСЫ — атмосферная текстура (блики + зерно), см. .cases-texture в
    css/style.css. Один непрерывный fixed-слой на весь сайт, прозрачность
    которого — гладкая функция позиции скролла: плавно наплывает при
@@ -591,6 +638,7 @@ function frameTick(now) {
 
   updateHero(smoothY);
   scrubA.update(smoothY);
+  updateServiceParallax(smoothY);
   updateCasesParallax(smoothY);
   updateCasesTexture(smoothY);
   updateTheme(smoothY);
@@ -621,6 +669,7 @@ if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     smoothY = window.scrollY;
     updateHero(smoothY);
     scrubA.update(smoothY);
+    updateServiceParallax(smoothY);
     updateCasesParallax(smoothY);
     updateCasesTexture(smoothY);
     updateTheme(smoothY);
