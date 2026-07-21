@@ -438,21 +438,42 @@ function pulsePhoneMock() {
 const fieldName = document.getElementById('fieldName');
 const fieldMessage = document.getElementById('fieldMessage');
 [fieldName, fieldMessage].forEach(field => {
-  field.addEventListener('input', () => { renderPhoneMock(); pulsePhoneMock(); });
+  field.addEventListener('input', () => {
+    renderPhoneMock();
+    pulsePhoneMock();
+    // подсказку про обязательные поля убираем сразу, как только форма
+    // снова стала валидной — не держим её до повторного сабмита
+    if (fieldName.checkValidity() && fieldMessage.checkValidity()) {
+      document.getElementById('contactFormNote').classList.remove('is-visible');
+    }
+  });
   field.addEventListener('focus', renderPhoneMock);
 });
 renderPhoneMock();
 
 const contactForm = document.getElementById('contactForm');
 const submitBtn = document.getElementById('contactSubmit');
+const contactFormNote = document.getElementById('contactFormNote');
 contactForm.addEventListener('submit', (e) => {
   e.preventDefault();
+  // валидация — required/minlength уже на самих полях (html5), но раз
+  // <form novalidate> убрали, submit сам не пройдёт дальше при невалидной
+  // форме без explicit reportValidity(); дублируем проверку тут, чтобы
+  // показать понятную подсказку рядом с полями, а не только нативный
+  // браузерный тултип
+  if (!contactForm.checkValidity()) {
+    contactForm.reportValidity();
+    contactFormNote.classList.add('is-visible');
+    return;
+  }
+  contactFormNote.classList.remove('is-visible');
   submitBtn.classList.add('is-sending');
   submitBtn.disabled = true;
   setTimeout(() => {
     submitBtn.classList.remove('is-sending');
-    submitBtn.disabled = false;
-    submitBtn.querySelector('.submit-label').textContent = 'Заявка отправлена ✓';
+    submitBtn.disabled = true;
+    submitBtn.querySelector('.submit-label').textContent = 'Отправлено ✓';
+    document.getElementById('contactFormSuccess').classList.add('is-visible');
     phoneMockScreen.classList.add('is-sent');
   }, 900);
 });

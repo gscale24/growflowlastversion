@@ -5,6 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Grow Flow — маркетинговое агентство полного цикла</title>
 <meta name="description" content="Grow Flow — маркетинговое агентство полного цикла. SMM, performance-маркетинг, SEO, контент-продакшн.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:title" content="Grow Flow — маркетинговое агентство полного цикла">
+<meta property="og:description" content="Grow Flow — маркетинговое агентство полного цикла. SMM, performance-маркетинг, SEO, контент-продакшн.">
+<!-- og:image намеренно не добавлен — сайт ещё не на реальном домене,
+     а og:image требует абсолютный URL. Когда появится домен и
+     полноразмерный (1200×630) арт для шаринга — добавить сюда и в
+     twitter:image. -->
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Grow Flow — маркетинговое агентство полного цикла">
+<meta name="twitter:description" content="Grow Flow — маркетинговое агентство полного цикла. SMM, performance-маркетинг, SEO, контент-продакшн.">
 <link rel="icon" type="image/png" href="assets/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,11 +31,13 @@
   только те, где свет в комнате синий, исходник шире и там свет ещё
   циклится по цветам; временная референсная съёмка, см. README). Тема
   каждой секции задаётся атрибутом
-  [data-theme] (см. css/style.css), фон плавно перекрашивается через
-  #bgLayer при скролле, без чередования по карточкам — по разделам:
-  Начало/Знакомство тёмные, Услуги и Контакты светлые, Кейсы тёмные.
+  [data-theme] (см. css/style.css), фон непрерывно перетекает через
+  #bgLayer при скролле (см. updateTheme в js/main.js), без чередования
+  по карточкам — по разделам: Начало/Знакомство тёмные, Услуги светлые,
+  Кейсы тёмные, Контакты светлые, Футер снова тёмный (бук-энд с hero).
   Карточки-плейсхолдеры в услугах (.service-object) и кейсах (.case-card-media)
   ждут реальной съёмки. Телефон-мокап в контактах — концепт, заменить на съёмку.
+  Контакты/соцсети в футере — честный плейсхолдер, заменить на реальные.
   ═══════════════════════════════════════════════════════════
 -->
 
@@ -71,6 +84,7 @@
     <img class="hero-logo-mark" src="assets/logo-mark.png" alt="Grow Flow" width="112" height="112">
     <h1>Grow Flow<sup>°</sup></h1>
     <span class="hero-logo-sub">маркетинговое агентство полного цикла</span>
+    <a href="#sceneC" class="hero-cta">Обсудить проект</a>
   </div>
   <div class="hero-scroll-cue">
     <span>Скролль</span>
@@ -305,16 +319,18 @@
       <form class="contact-form" id="contactForm" autocomplete="off" novalidate>
         <label>
           <span>Имя</span>
-          <input type="text" id="fieldName" placeholder="Как к вам обращаться">
+          <input type="text" id="fieldName" placeholder="Как к вам обращаться" required minlength="2">
         </label>
         <label>
           <span>Что нужно сделать</span>
-          <textarea id="fieldMessage" rows="3" placeholder="Коротко опишите задачу"></textarea>
+          <textarea id="fieldMessage" rows="3" placeholder="Коротко опишите задачу" required minlength="5"></textarea>
         </label>
+        <span class="contact-form-note" id="contactFormNote" role="alert">Заполните оба поля — имя и короткое описание задачи.</span>
         <button type="submit" class="contact-submit" id="contactSubmit">
           <span class="submit-label">Отправить заявку</span>
           <span class="submit-sending">Отправляется…</span>
         </button>
+        <span class="contact-form-success" id="contactFormSuccess" role="status">Заявка отправлена — ответим в течение дня.</span>
       </form>
     </div>
 
@@ -339,6 +355,37 @@
 
   </div>
 </section>
+
+<!-- ================= ФУТЕР — новая финальная секция (тёмная тема,
+     бук-энд с hero). Контакты/соцсети — честный плейсхолдер, заменить
+     на реальные при запуске. ================= -->
+<footer class="site-footer" id="siteFooter" data-theme="dark">
+  <div class="site-footer-inner reveal-block" data-reveal>
+    <p class="site-footer-cta">Есть идея?<br>Давайте обсудим.</p>
+
+    <div class="site-footer-grid">
+      <div class="site-footer-col">
+        <span class="eyebrow">Контакты</span>
+        <!-- плейсхолдер-контакты — заменить на реальные перед запуском -->
+        <a href="mailto:hello@growflow.ru" class="site-footer-link">hello@growflow.ru</a>
+        <a href="tel:+70000000000" class="site-footer-link">+7 000 000-00-00</a>
+      </div>
+      <div class="site-footer-col">
+        <span class="eyebrow">Соцсети</span>
+        <div class="site-footer-social">
+          <a href="#" class="site-footer-link">Instagram</a>
+          <a href="#" class="site-footer-link">Telegram</a>
+          <a href="#" class="site-footer-link">VK</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="site-footer-bottom">
+      <span class="site-footer-brand">Grow Flow<b>+</b></span>
+      <span class="site-footer-copy">© 2026 Grow Flow. Все права защищены.</span>
+    </div>
+  </div>
+</footer>
 
 <script src="js/main.js"></script>
 </body>

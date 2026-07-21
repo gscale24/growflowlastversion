@@ -4,10 +4,57 @@
   --fg-dim:#8f8b82;
   --accent:#c9a668;
   --line:rgba(245,242,234,0.12);
+  /* --accent-brand — фиксированный акцент бренда для CTA/ссылок, в
+     отличие от --accent НЕ участвует в непрерывной интерполяции темы
+     (updateTheme, js/main.js) и остаётся одним и тем же на любом фоне.
+     Используется только для ЗАЛИТЫХ кнопок (текст поверх — тёмный,
+     контраст 8.56:1) — как текстовый цвет прямо на фоне страницы он
+     не годится: на светлой теме золото на кремовом даёт всего 2:1,
+     это ниже WCAG AA даже для крупного текста. Для ссылок/hover прямо
+     на фоне страницы (.service-more, footer-link) осознанно оставлен
+     адаптивный --accent — он уже сам переключается между золотом на
+     тёмном и почти-чёрным на светлом, то есть контраст держит сам. */
+  --accent-brand:#c9a668;
+  --accent-brand-ink:#0c0b09;
   --serif:'Playfair Display', Georgia, serif;
   --sans:'Inter', -apple-system, sans-serif;
   --mono:'JetBrains Mono', monospace;
   --ease: cubic-bezier(.16,.84,.44,1);
+
+  /* ---- типографическая шкала ----
+     Заголовочная (Playfair/Inter в зависимости от места) и текстовая
+     (Inter) — используются для основной иерархии контента (h1/h2/h3,
+     body). Моноширинный --mono сюда не включён: это не третий "контентный"
+     шрифт, а функциональная гарнитура для лейблов/навигации/тегов
+     (см. "нумерация и лейблы секций как навигационные якоря" в брифе —
+     именно эту роль mono и выполняет по всему сайту, отдельно от
+     заголовок+текст). */
+  --fs-h1: clamp(40px, 7.4vw, 86px);
+  --fs-h2: clamp(48px, 7.2vw, 110px);
+  --fs-h3: clamp(22px, 2.6vw, 32px);
+  --fs-body: 16px;
+  --fs-small: 14px;
+  --lh-heading: 0.98;
+  --lh-body: 1.65;
+
+  /* ---- шкала отступов ----
+     Применена к крупным структурным отступам (паддинги секций/контейнеров,
+     межблочные margin под заголовками). Мелкие внутренние зазоры
+     (иконка+текст, лейбл+значение) сознательно оставлены точечно
+     подобранными px-значениями — единая шкала на них сплющила бы уже
+     откалиброванные пропорции мелких UI-элементов. */
+  --space-xs: 8px;
+  --space-sm: 16px;
+  --space-md: 28px;
+  --space-lg: 56px;
+  --space-xl: 96px;
+  /* горизонтальный паддинг секций — раньше был разбросан по местам как
+     литеральные "6%"/"5%", везде отдельно; один clamp() вместо этого:
+     не упирается в края на широких экранах (потолок 96px — то же
+     значение, что и --space-xl, для визуальной согласованности с
+     остальной шкалой отступов), но не съедает контент на мобильных
+     (пол 20px, ниже чем было 6% от 375px ≈ 22px). */
+  --container-pad: clamp(20px, 6vw, 96px);
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 html{background:var(--bg);}
@@ -15,6 +62,16 @@ html{background:var(--bg);}
    z-index:-1 проваливается ЗА собственный фон body/html, а не под секции */
 body{background:var(--bg);color:var(--fg);font-family:var(--sans);overflow-x:hidden;isolation:isolate;}
 a{color:inherit;}
+a,button{cursor:pointer;}
+/* Единое focus-состояние по умолчанию для клавиатурной навигации —
+   отдельные интерактивные компоненты (поля формы, вкладки услуг,
+   карточки кейсов) переопределяют его своим, более уместным по месту
+   индикатором (см. соответствующие блоки ниже), это — просто гарантия,
+   что ни один интерактивный элемент не останется вовсе без видимого
+   фокуса. */
+a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
+  outline:2px solid var(--accent-brand);outline-offset:3px;
+}
 
 @media (prefers-reduced-motion: reduce){
   *{animation-duration:0.01ms !important;animation-iteration-count:1 !important;transition-duration:0.01ms !important;}
@@ -169,7 +226,7 @@ a{color:inherit;}
   filter:drop-shadow(0 4px 26px rgba(0,0,0,0.65));
 }
 .hero-logo h1{
-  font-family:var(--serif);font-weight:400;font-size:clamp(40px,7.4vw,86px);
+  font-family:var(--serif);font-weight:400;font-size:var(--fs-h1);line-height:var(--lh-heading);
   letter-spacing:0.03em;text-transform:uppercase;
   text-shadow:0 6px 34px rgba(0,0,0,0.75), 0 2px 12px rgba(0,0,0,0.6);
 }
@@ -179,6 +236,26 @@ a{color:inherit;}
   text-transform:uppercase;color:var(--fg-dim);
   text-shadow:0 2px 12px rgba(0,0,0,0.6);
 }
+/* Главный CTA hero — залитая кнопка (не прозрачная обводка, как у
+   остальных вторичных действий на сайте): фон — фиксированный
+   --accent-brand, текст — фиксированный тёмный --accent-brand-ink.
+   Залитая пара держит контраст 8.56:1 независимо от того, что творится
+   с фоном страницы вокруг (в отличие от текста/ссылок цветом --accent
+   прямо на фоне, где этого гарантировать нельзя для произвольного тона). */
+.hero-cta{
+  display:inline-block;margin-top:34px;
+  background:var(--accent-brand);color:var(--accent-brand-ink);
+  font-family:var(--mono);font-size:12px;letter-spacing:0.12em;text-transform:uppercase;font-weight:500;
+  padding:16px 34px;border-radius:100px;border:1px solid var(--accent-brand);
+  text-decoration:none;cursor:pointer;
+  box-shadow:0 10px 30px rgba(201,166,104,0.25);
+  transition:transform .2s var(--ease), box-shadow .2s var(--ease), background-color .2s var(--ease);
+}
+.hero-cta:hover,.hero-cta:focus-visible{
+  transform:translateY(-2px);
+  box-shadow:0 14px 38px rgba(201,166,104,0.38);
+}
+.hero-cta:active{transform:translateY(0);}
 .hero-scroll-cue{
   position:absolute;bottom:36px;left:50%;transform:translateX(-50%);z-index:2;
   display:flex;flex-direction:column;align-items:center;gap:10px;
@@ -194,15 +271,16 @@ a{color:inherit;}
   color:var(--accent);margin-bottom:18px;
 }
 
-/* 100vh + запас (не 90vh): .chapter сейчас использует только Контакты —
-   она же последняя секция на странице, а без outro/footer после неё
-   ничего нет, так что на максимальном скролле высота должна с запасом
-   закрывать весь вьюпорт, иначе снизу предыдущей секции (Кейсы) остаётся
-   видна полоска. Небольшой запас поверх 100vh — на случай, если мобильный
-   браузер на максимальном скролле скругляет доступную высоту не в нашу
-   пользу (скрывающаяся адресная строка и т.п.). */
+/* 100vh + запас (не 90vh): .chapter сейчас использует только Контакты.
+   Раньше это была последняя секция страницы, и высота с запасом была
+   нужна, чтобы на максимальном скролле гарантированно закрывать весь
+   вьюпорт (иначе снизу «Кейсов» оставалась видна полоска) — теперь
+   после «Контактов» есть футер (.site-footer), но правило оставлено:
+   тот же класс мобильного скругления доступной высоты на максимальном
+   скролле (скрывающаяся адресная строка) касается любого блока, так что
+   запас не помешает и когда секция уже не последняя. */
 .chapter{position:relative;min-height:calc(100vh + 60px);display:flex;align-items:center;}
-.chapter-inner{width:100%;max-width:1200px;margin:0 auto;padding:10vh 6%;}
+.chapter-inner{width:100%;max-width:1200px;margin:0 auto;padding:10vh var(--container-pad);}
 
 /* reveal-по-скроллу: карточка/блок плавно "разворачивается" при входе
    в вьюпорт (IntersectionObserver добавляет .is-visible один раз) —
@@ -238,7 +316,7 @@ a{color:inherit;}
   color:#f5f2ea;text-shadow:0 3px 20px rgba(0,0,0,0.75), 0 1px 6px rgba(0,0,0,0.6);
 }
 .intro-copy p{
-  color:#b9c4d6;font-size:15px;line-height:1.6;max-width:440px;
+  color:#b9c4d6;font-size:var(--fs-body);line-height:var(--lh-body);max-width:440px;
   text-shadow:0 2px 14px rgba(0,0,0,0.75);
 }
 @media (max-width:820px){
@@ -255,7 +333,7 @@ a{color:inherit;}
 .services-groupbar{
   z-index:5;
   display:flex;align-items:center;justify-content:space-between;
-  padding:22px 6%;
+  padding:22px var(--container-pad);
   font-family:var(--mono);font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;
   color:var(--fg);mix-blend-mode:difference;pointer-events:none;
 }
@@ -275,7 +353,14 @@ a{color:inherit;}
 }
 @keyframes servicesRecPulse{0%,100%{opacity:1;}50%{opacity:0.25;}}
 
-.services-grid{display:grid;grid-template-columns:min(140px,14vw) 1fr;gap:0 4%;padding:0 6%;}
+/* max-width + auto-margin: на очень широких экранах (>1600px) колонка
+   с текстом карточек не должна растягиваться до бесконечности — грид
+   останавливается и дальше просто центрируется, с равными полями по
+   бокам, а не "размазывается" по всей ширине окна */
+.services-grid{
+  display:grid;grid-template-columns:min(140px,14vw) 1fr;gap:0 4%;
+  padding:0 var(--container-pad);max-width:1680px;margin:0 auto;
+}
 /* align-self:start важен: без него грид растягивает рейл на всю высоту
    колонки (все 4 карточки), и его sticky-контейнером внезапно становится
    собственный (растянутый или, наоборот, схлопнутый до 0) бокс — тогда
@@ -292,9 +377,9 @@ a{color:inherit;}
   writing-mode:vertical-rl;transform:rotate(180deg);
   font-family:var(--mono);font-size:11px;letter-spacing:0.14em;text-transform:uppercase;
   color:inherit;opacity:0.55;
-  transition:opacity .3s;
+  transition:opacity .2s var(--ease);
 }
-.services-tab:hover{opacity:0.85;}
+.services-tab:hover,.services-tab:focus-visible{opacity:0.85;}
 .services-tab.is-active{opacity:1;font-weight:500;}
 .services-tab.is-active::before{content:'[';margin-bottom:4px;}
 .services-tab.is-active::after{content:']';margin-top:4px;}
@@ -320,19 +405,20 @@ a{color:inherit;}
 }
 .service-word{
   font-family:var(--sans);font-weight:800;text-transform:uppercase;letter-spacing:-0.02em;
-  font-size:clamp(48px,7.2vw,110px);line-height:0.94;color:var(--fg);margin-bottom:22px;
+  font-size:var(--fs-h2);line-height:var(--lh-heading);color:var(--fg);margin-bottom:var(--space-md);
   clip-path:inset(0 0 100% 0);
   transition:clip-path 1.1s var(--ease);
 }
 .service-block.is-visible .service-word{clip-path:inset(0 0 0% 0);}
-.service-desc{color:var(--fg);font-size:16px;line-height:1.65;max-width:440px;margin-bottom:12px;}
-.service-tagline{color:var(--fg-dim);font-size:14px;margin-bottom:22px;}
+.service-desc{color:var(--fg);font-size:var(--fs-body);line-height:var(--lh-body);max-width:440px;margin-bottom:var(--space-sm);}
+.service-tagline{color:var(--fg-dim);font-size:var(--fs-small);margin-bottom:var(--space-md);}
 .service-more{
   background:none;border:none;cursor:pointer;color:var(--fg);
   font-family:var(--mono);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;
-  padding-bottom:3px;border-bottom:1px solid var(--line);transition:color .3s,border-color .3s;
+  padding-bottom:3px;border-bottom:1px solid var(--line);
+  transition:color .2s var(--ease),border-color .2s var(--ease);
 }
-.service-more:hover{color:var(--accent);border-color:var(--accent);}
+.service-more:hover,.service-more:focus-visible{color:var(--accent);border-color:var(--accent);}
 
 /* ---- предметный объект-плейсхолдер: честно подписан, ждёт реальной съёмки ----
    Три независимых слоя transform на трёх вложенных узлах, каждый — свой
@@ -380,8 +466,12 @@ a{color:inherit;}
 }
 
 @media (max-width:820px){
-  .services-groupbar{padding:16px 5%;}
-  .services-grid{grid-template-columns:1fr;padding:0 6%;}
+  /* горизонтальный паддинг здесь больше не переопределяется отдельно —
+     var(--container-pad) на базовых правилах уже clamp(20px,6vw,96px),
+     что на 375-428px даёт практически то же самое (6vw ≈ старым 5-6%
+     для full-bleed контейнера), заодно ограничивая рост на широких */
+  .services-groupbar{padding-top:16px;padding-bottom:16px;}
+  .services-grid{grid-template-columns:1fr;}
   .services-tabs-rail{display:none;}
   .service-block{flex-direction:column;align-items:flex-start;gap:32px;min-height:auto;padding:9vh 0;}
   .service-object{align-self:center;}
@@ -418,7 +508,10 @@ a{color:inherit;}
 .cases-intro-plus--2{top:24%;right:30%;}
 
 .cases-group{position:relative;}
-.cases-frame{position:relative;padding:8vh 6% 14vh;overflow:hidden;}
+/* max-width, как и у .services-grid — на очень широких экранах доска
+   карточек не растягивается до края в край (иначе карточки смотрятся
+   рассыпанными слишком редко), а стопорится и центрируется */
+.cases-frame{position:relative;padding:8vh var(--container-pad) 14vh;max-width:1800px;margin:0 auto;overflow:hidden;}
 .cases-bg-text{
   position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);z-index:0;
   font-family:var(--serif);font-weight:600;text-transform:uppercase;
@@ -430,8 +523,15 @@ a{color:inherit;}
   position:relative;z-index:2;
   height:clamp(620px,64vw,1040px);
 }
+/* Hover/focus-эффект карточки не может трогать transform на самой
+   .case-card — на десктопе этот transform каждый кадр перезаписывается
+   JS-параллаксом (updateCasesParallax, translateY+rotate), и любое
+   CSS-правило transform на :hover было бы тут же затёрто следующим
+   кадром. Поэтому "увеличение" — на вложенной .case-card-media (см.
+   ниже), а на самой карточке меняются только box-shadow/тени, которые
+   JS не трогает. */
 .case-card{
-  position:absolute;display:block;background:#f2efe7;border-radius:2px;
+  position:absolute;display:block;background:#f2efe7;border-radius:2px;overflow:hidden;
   /* тройная тень вместо одной плоской — контактная (резкая, у самой
      карточки), приподнятая (мягкая, среднего радиуса) и дальняя
      отброшенная (широкая, размытая) — вместе читаются как объём и
@@ -440,10 +540,17 @@ a{color:inherit;}
     0 1px 2px rgba(0,0,0,0.18),
     0 10px 24px rgba(0,0,0,0.24),
     22px 28px 0 0 rgba(0,0,0,0.30);
-  opacity:0;transition:opacity 1s var(--ease);
+  opacity:0;
+  transition:opacity 1s var(--ease), box-shadow .25s var(--ease);
   will-change:transform;
 }
 .case-card.is-visible{opacity:1;}
+.case-card:hover,.case-card:focus-visible{
+  box-shadow:
+    0 2px 3px rgba(0,0,0,0.22),
+    0 16px 34px rgba(0,0,0,0.3),
+    22px 28px 0 0 rgba(201,166,104,0.55);
+}
 /* горизонтальные карточки, размеры и позиции вразнобой — внахлёст, а не
    аккуратной сеткой */
 .case-card:nth-child(1){top:0%;   left:2%;  width:29%; z-index:3;}
@@ -452,10 +559,22 @@ a{color:inherit;}
 .case-card:nth-child(4){top:52%;  left:0%;  width:27%; z-index:2;}
 .case-card:nth-child(5){top:60%;  left:32%; width:29%; z-index:5;}
 .case-card:nth-child(6){top:46%;  left:64%; width:28%; z-index:3;}
+/* Масштаб на hover — на самой .case-card-media (обёртка градиента-
+   плейсхолдера/будущего фото), а не на .case-card: у карточки transform
+   занят JS-параллаксом (см. комментарий выше), а внутренний слой
+   свободен — тот же приём разделения transform по вложенным узлам, что
+   и у .service-object/.service-object-parallax/.service-object-card. */
 .case-card-media{
   position:relative;aspect-ratio:3/2;overflow:hidden;
   display:flex;align-items:center;justify-content:center;
+  transition:transform .3s var(--ease);
 }
+.case-card-media::after{
+  content:'';position:absolute;inset:0;background:#0c0b09;opacity:0;
+  transition:opacity .25s var(--ease);
+}
+.case-card:hover .case-card-media,.case-card:focus-visible .case-card-media{transform:scale(1.06);}
+.case-card:hover .case-card-media::after,.case-card:focus-visible .case-card-media::after{opacity:0.08;}
 .case-card-media span{
   font-family:var(--serif);font-size:clamp(48px,7vw,90px);color:rgba(12,11,9,0.16);
 }
@@ -472,8 +591,9 @@ a{color:inherit;}
 .case-card-tags{display:flex;flex-wrap:wrap;gap:4px 14px;}
 .case-card-tags span{
   position:relative;font-family:var(--mono);font-size:9px;letter-spacing:0.06em;text-transform:uppercase;
-  color:#6d685c;padding-left:11px;
+  color:#6d685c;padding-left:11px;transition:color .2s var(--ease);
 }
+.case-card:hover .case-card-tags span,.case-card:focus-visible .case-card-tags span{color:var(--accent-brand-ink);}
 .case-card-tags span::before{content:'';position:absolute;left:0;top:1px;bottom:1px;width:1px;background:rgba(12,11,9,0.18);}
 
 @media (max-width:820px){
@@ -491,7 +611,17 @@ a{color:inherit;}
   opacity:0;pointer-events:none;transition:opacity .35s var(--ease);
 }
 .service-modal.is-open{opacity:1;pointer-events:auto;}
+/* Реальный контраст-баг: модалка открывается только из «Услуг», а «Услуги»
+   — целиком светлая тема (--fg там уходит в почти-чёрный). Сама модалка
+   при этом всегда тёмная (background:#111, фиксированно, вне зависимости
+   от темы страницы под ней) — но текст внутри до этой правки наследовал
+   ТЕКУЩИЙ --fg страницы, то есть почти-чёрный на почти-чёрном, текст
+   был практически невидим. Локальный оверрайд --fg/--fg-dim на самом
+   .service-modal-inner (тот же приём, что и #sceneA{--accent:...} для
+   синего акцента «Знакомства») фиксирует их светлыми — модалка теперь
+   не зависит от темы страницы под ней, как и было задумано визуально. */
 .service-modal-inner{
+  --fg:#f5f2ea;--fg-dim:#8f8b82;--accent:#c9a668;
   position:relative;max-width:560px;width:90%;padding:48px 40px;background:#111;border:1px solid var(--line);
   transform:translateY(16px);transition:transform .35s var(--ease);
 }
@@ -499,11 +629,12 @@ a{color:inherit;}
 .service-modal-close{
   position:absolute;top:28px;right:28px;background:none;border:none;color:var(--fg-dim);
   font-family:var(--mono);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;
+  transition:color .2s var(--ease);
 }
-.service-modal-close:hover{color:var(--accent);}
+.service-modal-close:hover,.service-modal-close:focus-visible{color:var(--accent-brand);}
 .service-modal-num{font-family:var(--mono);font-size:12px;color:var(--accent);}
 .service-modal-inner h3{font-family:var(--serif);font-size:30px;font-weight:400;margin:12px 0 18px;}
-.service-modal-inner p{color:var(--fg-dim);font-size:15px;line-height:1.6;margin-bottom:22px;}
+.service-modal-inner p{color:var(--fg-dim);font-size:var(--fs-body);line-height:var(--lh-body);margin-bottom:var(--space-md);}
 .service-modal-inner ul{list-style:none;}
 .service-modal-inner li{
   padding:12px 0;border-top:1px solid var(--line);font-size:14px;color:var(--fg);
@@ -517,29 +648,76 @@ a{color:inherit;}
 }
 .contact-panel{width:min(440px,100%);}
 .contact-panel h2{
-  font-family:var(--serif);font-weight:400;font-size:clamp(22px,2.6vw,32px);line-height:1.35;margin-bottom:28px;
+  font-family:var(--serif);font-weight:400;font-size:var(--fs-h3);line-height:1.35;margin-bottom:var(--space-md);
   color:var(--fg);
 }
-.contact-form label{display:block;margin-bottom:16px;}
-.contact-form span{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--fg-dim);margin-bottom:6px;}
+.contact-form label{display:block;margin-bottom:var(--space-sm);}
+/* Реальный баг, найденный при полировке: было .contact-form span (без
+   уточнения label) — оно попадало и на .submit-label/.submit-sending
+   ВНУТРИ кнопки .contact-submit (та тоже лежит в .contact-form), и,
+   будучи специфичнее одноклассового .submit-sending{display:none}
+   (тут есть ещё и тег span в селекторе — специфичность выше), спокойно
+   его перебивало. В итоге оба состояния кнопки — "Отправить заявку" и
+   "Отправляется…" — рендерились одновременно, будто одно наехало на
+   другое. label span — узкий, точный селектор именно под подписи полей
+   формы ("Имя"/"Что нужно сделать"), не задевает spans внутри кнопки. */
+.contact-form label span{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:var(--fg-dim);margin-bottom:6px;}
+/* Раньше поля были прозрачными, только нижняя линия — по брифу нужны
+   "явные рамки/подложки": рамка со всех сторон + едва заметная
+   подложка тоном текста (color-mix — читает текущий, непрерывно
+   интерполируемый --fg, поэтому подложка остаётся уместной и на тёмной,
+   и на светлой теме без отдельного правила на каждую). */
 .contact-form input,.contact-form textarea{
-  width:100%;background:transparent;border:none;border-bottom:1px solid var(--line);
-  color:var(--fg);font-family:var(--sans);font-size:15px;padding:8px 0;resize:none;
-  transition:border-color .3s;
+  width:100%;
+  background:color-mix(in srgb, var(--fg) 5%, transparent);
+  border:1px solid var(--line);border-radius:8px;
+  color:var(--fg);font-family:var(--sans);font-size:var(--fs-body);padding:12px 14px;resize:none;
+  transition:border-color .2s var(--ease), box-shadow .2s var(--ease), background-color .2s var(--ease);
 }
-.contact-form input:focus,.contact-form textarea:focus{outline:none;border-color:var(--accent);}
+.contact-form input:focus,.contact-form textarea:focus{
+  outline:none;border-color:var(--accent-brand);
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--accent-brand) 22%, transparent);
+}
+/* лёгкая индикация невалидного поля — только после того, как в него
+   уже что-то ввели (:not(:placeholder-shown)), чтобы пустое
+   обязательное поле не подсвечивалось красным ещё до того, как
+   пользователь вообще успел его заметить */
+.contact-form input:invalid:not(:placeholder-shown),
+.contact-form textarea:invalid:not(:placeholder-shown){
+  border-color:#c65b4a;
+}
 .contact-form input::placeholder,.contact-form textarea::placeholder{color:var(--fg-dim);opacity:0.6;}
+.contact-form-note{
+  display:block;margin-top:-8px;margin-bottom:var(--space-sm);
+  font-family:var(--mono);font-size:11px;color:#c65b4a;
+  opacity:0;height:0;overflow:hidden;transition:opacity .2s var(--ease);
+}
+.contact-form-note.is-visible{opacity:1;height:auto;margin-top:0;}
+/* Главное CTA-действие формы — тот же залитый accent-brand, что и у
+   hero-кнопки: единый, узнаваемый цвет действия по всему сайту вместо
+   прозрачной обводки, которая раньше ничем не отличалась от обычной
+   вторичной кнопки. */
 .contact-submit{
-  margin-top:14px;background:none;border:1px solid var(--line);color:var(--fg);
-  font-family:var(--mono);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;
-  padding:14px 26px;border-radius:100px;cursor:pointer;transition:border-color .3s, background .3s, color .3s;
+  margin-top:var(--space-xs);background:var(--accent-brand);color:var(--accent-brand-ink);
+  font-family:var(--mono);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;font-weight:500;
+  padding:14px 26px;border-radius:100px;border:1px solid var(--accent-brand);cursor:pointer;
+  transition:transform .2s var(--ease), box-shadow .2s var(--ease), opacity .2s var(--ease);
   position:relative;
 }
-.contact-submit:hover{border-color:var(--accent);}
+.contact-submit:hover,.contact-submit:focus-visible{
+  transform:translateY(-2px);box-shadow:0 10px 26px rgba(201,166,104,0.3);
+}
+.contact-submit:active{transform:translateY(0);}
+.contact-submit:disabled{cursor:default;opacity:0.7;transform:none;}
 .submit-sending{display:none;}
 .contact-submit.is-sending .submit-label{display:none;}
 .contact-submit.is-sending .submit-sending{display:inline;}
-.contact-submit.is-sending{background:var(--accent);color:var(--bg);border-color:var(--accent);}
+.contact-form-success{
+  display:block;margin-top:var(--space-sm);
+  font-family:var(--mono);font-size:11px;letter-spacing:0.04em;color:var(--fg-dim);
+  opacity:0;height:0;overflow:hidden;transition:opacity .3s var(--ease);
+}
+.contact-form-success.is-visible{opacity:1;height:auto;}
 
 /* ---- Телефон-концепт ---- */
 .phone-mock{
@@ -592,6 +770,57 @@ a{color:inherit;}
 .phone-mock-screen.is-sent .phone-mock-field{display:none;}
 .phone-mock-screen.is-sent .phone-mock-check{display:flex;}
 @media (max-width:820px){ .phone-mock{display:none;} }
+
+/* ---- Футер ----
+   Новая последняя секция страницы, после «Контактов». Специально
+   тёмная (data-theme="dark") — обрамляет сайт тем же тоном, что и hero
+   ("бук-энд" тёмный→светлый→...→тёмный), а не просто продолжает
+   светлую тему «Контактов»: с одной стороны это ещё один настоящий
+   переход в общей системе непрерывного градиента (не какое-то
+   исключение из неё — [data-theme] здесь работает по той же схеме, что
+   и везде), с другой — визуально закрывает композицию, а не обрывается
+   на форме. */
+/* min-height:100vh (+60px запас) — тот же приём и то же обоснование,
+   что раньше применялись к .chapter, когда последней секцией страницы
+   были «Контакты»: непрерывный градиент темы (updateTheme, js/main.js)
+   едет по зоне шириной вплоть до ~innerHeight*0.9 по обе стороны от
+   границы — если после границы физически меньше места, чем половина
+   этой зоны, до конца документа докрутить не успевает, и в самом низу
+   страницы остаётся недоехавший, чуть сероватый (не до конца чёрный)
+   фон вместо чистого чёрного. При min-height:100vh снизу от границы
+   темы гарантированно есть целый вьюпорт места — с запасом на любую
+   ширину зоны при любой реальной высоте окна (математически: нужно
+   half(ih)+ih/2 ≤ ih, что для нашей формулы зоны верно всегда). */
+.site-footer{position:relative;min-height:calc(100vh + 60px);display:flex;align-items:center;padding:var(--space-xl) var(--container-pad) var(--space-lg);}
+.site-footer-inner{max-width:1200px;margin:0 auto;}
+.site-footer-cta{
+  font-family:var(--serif);font-weight:400;font-size:var(--fs-h2);line-height:var(--lh-heading);
+  color:var(--fg);max-width:16ch;margin-bottom:var(--space-xl);
+}
+.site-footer-grid{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-lg) var(--space-xl);
+  padding-bottom:var(--space-xl);border-bottom:1px solid var(--line);
+}
+.site-footer-col{display:flex;flex-direction:column;gap:10px;}
+.site-footer-link{
+  display:inline-block;width:fit-content;color:var(--fg);text-decoration:none;
+  font-family:var(--sans);font-size:var(--fs-body);
+  border-bottom:1px solid transparent;
+  transition:color .2s var(--ease),border-color .2s var(--ease);
+}
+.site-footer-link:hover,.site-footer-link:focus-visible{color:var(--accent);border-color:var(--accent);}
+.site-footer-social{display:flex;flex-direction:column;gap:10px;}
+.site-footer-bottom{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-sm);
+  padding-top:var(--space-md);
+  font-family:var(--mono);font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--fg-dim);
+}
+.site-footer-brand{font-family:var(--serif);font-size:15px;letter-spacing:0.02em;color:var(--fg);text-transform:none;}
+.site-footer-brand b{font-weight:400;margin-left:2px;color:var(--accent);}
+@media (max-width:820px){
+  .site-footer-grid{grid-template-columns:1fr;gap:var(--space-lg);}
+  .site-footer-bottom{flex-direction:column;align-items:flex-start;}
+}
 
 /* ============ RESPONSIVE ============ */
 @media (max-width:820px){
