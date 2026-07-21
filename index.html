@@ -34,6 +34,15 @@
      [data-theme], вместо резкой смены фона от блока к блоку. -->
 <div class="bg-layer" id="bgLayer"></div>
 
+<!-- атмосферная текстура «Кейсов»: тоже fixed на весь вьюпорт (как
+     #bgLayer, только рисуется позже — значит поверх), чтобы наплывающий
+     блик/зерно был одним непрерывным слоем на всю секцию, а не обрывался
+     на границе заставки и доски с карточками (см. js/main.js updateCasesTexture) -->
+<div class="cases-texture" id="casesTexture" aria-hidden="true">
+  <div class="cases-texture-glow"></div>
+  <div class="cases-texture-grain"></div>
+</div>
+
 <!-- ================= ПРЕЛОАДЕР ================= -->
 <div class="preloader" id="preloader">
   <span class="preloader-mark">Grow Flow</span>
@@ -212,7 +221,6 @@
   <!-- заставка перед доской кейсов, по образцу заглавного экрана
        секции WORK на kookie-kollective.com -->
   <div class="cases-intro">
-    <div class="cases-intro-bg" aria-hidden="true"></div>
     <span class="cases-intro-corner cases-intro-corner--tl" aria-hidden="true"></span>
     <span class="cases-intro-corner cases-intro-corner--tr" aria-hidden="true"></span>
     <span class="cases-intro-corner cases-intro-corner--bl" aria-hidden="true"></span>

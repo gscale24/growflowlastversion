@@ -463,10 +463,24 @@ contactForm.addEventListener('submit', (e) => {
    (и пересчитывается при resize), чтобы не зависеть от того, что
    offsetParent карточки — сама позиционированная секция .cases-group.
    ================================================================== */
-const prefersNoParallax = window.matchMedia('(pointer: coarse)').matches
-  || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const caseCards = Array.from(document.querySelectorAll('.case-card')).map(el => ({
-  el, speed: parseFloat(el.dataset.speed) || 0, centerY: 0,
+// координатная сетка карточек — только desktop-раскладка (нахлёст,
+// абсолютное позиционирование); на тач-устройствах (`pointer: coarse`)
+// карточки уходят в простой вертикальный список (position:static,
+// см. media-запрос в css/style.css) — там ни параллаксу, ни наклону
+// делать нечего, наклон на full-width строке читался бы как визуальный
+// баг, а не как приём. prefers-reduced-motion отдельно — desktop без
+// анимации всё ещё держит статичный наклон, просто без покачивания.
+const prefersCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const prefersNoParallax = prefersCoarsePointer || prefersReducedMotion;
+// лёгкий постоянный наклон у каждой карточки (как у разбросанных на столе
+// фотографий) — вместе с параллаксом и тройной тенью создаёт объём вместо
+// плоской подложки; складывается в один transform с параллаксом ниже, а
+// не отдельным CSS-правилом — иначе JS каждый кадр затирал бы его,
+// перезаписывая весь inline style.transform целиком
+const CASE_CARD_TILT = [-2.2, 1.6, -1.4, 2.4, -1.8, 1.2];
+const caseCards = Array.from(document.querySelectorAll('.case-card')).map((el, i) => ({
+  el, speed: parseFloat(el.dataset.speed) || 0, centerY: 0, tilt: CASE_CARD_TILT[i % CASE_CARD_TILT.length],
 }));
 function measureCaseCards() {
   caseCards.forEach(c => {
@@ -479,13 +493,44 @@ function updateCasesParallax(scrollPos) {
   const viewportCenter = scrollPos + window.innerHeight / 2;
   caseCards.forEach(c => {
     const offset = (c.centerY - viewportCenter) * c.speed;
-    c.el.style.transform = `translateY(${offset.toFixed(1)}px)`;
+    c.el.style.transform = `translateY(${offset.toFixed(1)}px) rotate(${c.tilt}deg)`;
   });
 }
 if (!prefersNoParallax) {
   measureCaseCards();
   window.addEventListener('resize', measureCaseCards);
   window.addEventListener('load', measureCaseCards);
+} else if (!prefersCoarsePointer) {
+  caseCards.forEach(c => { c.el.style.transform = `rotate(${c.tilt}deg)`; });
+}
+
+/* ==================================================================
+   КЕЙСЫ — атмосферная текстура (блики + зерно), см. .cases-texture в
+   css/style.css. Один непрерывный fixed-слой на весь сайт, прозрачность
+   которого — гладкая функция позиции скролла: плавно наплывает при
+   входе в «Кейсы» и так же плавно спадает при выходе из неё, симметрично
+   по обе стороны секции, той же smoothstep-логикой, что и updateTheme —
+   поэтому текстура никогда не обрывается резко на границе заставки и
+   доски с карточками (внутри секции она попросту не выключается).
+   ================================================================== */
+const casesTexture = document.getElementById('casesTexture');
+const workEl = document.getElementById('work');
+let workTop = 0, workBottom = 0;
+function measureCasesTexture() {
+  workTop = workEl.getBoundingClientRect().top + window.scrollY;
+  workBottom = workTop + workEl.offsetHeight;
+}
+measureCasesTexture();
+window.addEventListener('resize', measureCasesTexture);
+window.addEventListener('load', measureCasesTexture);
+
+function updateCasesTexture(scrollPos) {
+  if (!casesTexture) return;
+  const center = scrollPos + window.innerHeight / 2;
+  const fade = Math.max(480, Math.min(1100, window.innerHeight * 0.9));
+  const inT = smoothstep(Math.max(0, Math.min(1, (center - (workTop - fade / 2)) / fade)));
+  const outT = smoothstep(Math.max(0, Math.min(1, ((workBottom + fade / 2) - center) / fade)));
+  casesTexture.style.opacity = Math.min(inT, outT).toFixed(3);
 }
 
 /* ==================================================================
@@ -547,6 +592,7 @@ function frameTick(now) {
   updateHero(smoothY);
   scrubA.update(smoothY);
   updateCasesParallax(smoothY);
+  updateCasesTexture(smoothY);
   updateTheme(smoothY);
   updateProgressRail(smoothY);
 
@@ -576,6 +622,7 @@ if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     updateHero(smoothY);
     scrubA.update(smoothY);
     updateCasesParallax(smoothY);
+    updateCasesTexture(smoothY);
     updateTheme(smoothY);
     updateProgressRail(smoothY);
   }, { passive: true });
