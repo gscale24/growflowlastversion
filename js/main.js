@@ -155,14 +155,12 @@ const scrubA = makeCoverScrubber({
   canvasEl: document.getElementById('canvasA'),
   frameCount: SCENES_META.sceneA.frames,
   frameFolder: SCENES_META.sceneA.folder,
-  // между 14-м и 15-м кадром — монтажная склейка (вырезан кусок ролика
-  // с чужим цветом света), кадры там не соседние по-настоящему
-  hardCuts: [13],
+  // один непрерывный дубль (сел → руки на клавиатуру), склеек нет
+  hardCuts: [],
   onProgress(p) {
-    // текст появляется, когда руки уже почти легли на клавиатуру, и
-    // остаётся на экране до конца пина — после этого кадр «замирает»
-    // на последнем (руки на клавиатуре) и секция заканчивается
-    introCopy.classList.toggle('is-visible', p >= 0.82);
+    // текст появляется, когда руки лягут на клавиатуру (кадр 11 из 24 —
+    // p ≈ 10/23), и остаётся на экране до конца пина
+    introCopy.classList.toggle('is-visible', p >= 0.45);
   },
 });
 
