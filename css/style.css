@@ -205,7 +205,12 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
 
 /* ============ HERO ============ */
 .hero{position:relative;height:100vh;min-height:600px;overflow:hidden;display:flex;align-items:center;justify-content:center;}
-.hero-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:saturate(0.62) brightness(0.58) contrast(1.05);display:none;}
+/* object-position: center — герой снят почти симметрично (человек и
+   клавиатура по центру кадра), проверено кроп-симуляцией и на 375px:
+   центр держит в кадре руки/клавиатуру/телефон без отдельного мобильного
+   оверрайда, несмотря на то что видео горизонтальное (1280×720), а на
+   узких экранах вырез почти квадратный/вертикальный */
+.hero-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;filter:saturate(0.62) brightness(0.58) contrast(1.05);display:none;}
 .hero-video.is-on{display:block;}
 .hero-fallback{
   position:absolute;inset:0;
