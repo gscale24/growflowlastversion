@@ -158,11 +158,30 @@ const scrubA = makeCoverScrubber({
   // один непрерывный дубль (сел → руки на клавиатуру), склеек нет
   hardCuts: [],
   onProgress(p) {
-    // текст появляется, когда руки лягут на клавиатуру (кадр 11 из 24 —
-    // p ≈ 10/23), и остаётся на экране до конца пина
-    introCopy.classList.toggle('is-visible', p >= 0.45);
+    // текст появляется, когда руки лягут на клавиатуру (кадр 14 из 24 —
+    // p ≈ 13/23), и остаётся на экране до конца пина
+    introCopy.classList.toggle('is-visible', p >= 0.56);
   },
 });
+
+// стык hero → «Знакомство»: без этого канвас с первым же пикселем в
+// вьюпорте уже стоит в полной яркости — рядом с гаснущим hero это
+// читается как щелчок, а не переход. rootMargin с большим отступом
+// снизу срабатывает, пока секция ещё на ~40% высоты экрана ниже
+// вьюпорта — за время transition (см. .intro-sticky canvas в
+// css/style.css) канвас успевает выйти на полную непрозрачность
+// раньше, чем пользователь долистает до самого пина, поэтому сам
+// момент прилипания уже ничем не выделяется на глаз. Разовый триггер,
+// как и у остальных .reveal-block на странице — дальше не трогаем.
+const introRevealObserver = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('is-visible');
+      introRevealObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0, rootMargin: '0px 0px 40% 0px' });
+introRevealObserver.observe(document.querySelector('.intro-sticky'));
 
 /* ==================================================================
    ФОН СЕКЦИЙ — вся страница как единое полотно с непрерывным градиентом
@@ -641,7 +660,7 @@ function updateProgressRail(scrollPos) {
    реально прошедшему времени, а не за "тик" — так эффект не зависит
    от частоты кадров.
    ================================================================== */
-const SMOOTH_HALFLIFE_MS = 55; // за это время разрыв между smoothY и целью уменьшается вдвое
+const SMOOTH_HALFLIFE_MS = 80; // за это время разрыв между smoothY и целью уменьшается вдвое
 let smoothY = window.scrollY;
 let rafRunning = false;
 let lastTickTime = 0;
