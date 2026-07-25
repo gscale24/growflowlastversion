@@ -80,7 +80,17 @@
 <section class="hero" id="hero">
   <video class="hero-video" autoplay muted loop playsinline id="heroVideo"></video>
   <div class="hero-fallback" id="heroFallback"></div>
+  <div class="hero-grain" aria-hidden="true"></div>
   <div class="hero-overlay"></div>
+
+  <!-- HUD-строка технических индикаторов, по образцу REC/4K-readout'ов
+       у референса — статус студии, а не реальные метрики съёмки -->
+  <div class="hero-meta" aria-hidden="true">
+    <span class="hero-meta-item hero-meta-item--rec"><i></i>REC</span>
+    <span class="hero-meta-item">AGENCY / FULL CYCLE</span>
+    <span class="hero-meta-item">40+ ПРОЕКТОВ</span>
+  </div>
+
   <div class="hero-logo">
     <img class="hero-logo-mark" src="assets/logo-mark.png" alt="Grow Flow" width="112" height="112">
     <h1>Grow Flow<sup>°</sup></h1>
@@ -133,8 +143,16 @@
         <div class="service-block-inner">
           <span class="service-num">01</span>
           <h2 class="service-word">SMM</h2>
-          <p class="service-desc">Строим сообщество вокруг бренда: от контент-плана и визуального языка до ежедневной модерации и роста живой аудитории.</p>
-          <p class="service-tagline">Каждая услуга — законченная система, а не разовая настройка.</p>
+          <div class="service-formula">
+            <p class="service-line">Аккаунт есть, а сообщества вокруг него — нет.</p>
+            <p class="service-line">Строим контент, рубрикатор и модерацию в систему, а не в разовые посты.</p>
+            <p class="service-line service-line--strong">Аудитории есть, зачем возвращаться — снова и снова.</p>
+          </div>
+          <div class="service-tags">
+            <span class="service-tag">Контент</span>
+            <span class="service-tag">Модерация</span>
+            <span class="service-tag">Аналитика</span>
+          </div>
           <button class="service-more" data-service="smm" type="button">Подробнее о составе работ <span class="link-arrow-icon">↗</span></button>
         </div>
         <div class="service-object" aria-hidden="true">
@@ -153,8 +171,16 @@
         <div class="service-block-inner">
           <span class="service-num">02</span>
           <h2 class="service-word">Таргет</h2>
-          <p class="service-desc">Настраиваем связку трафик → лид → продажа и держим её под постоянной оптимизацией по цифрам.</p>
-          <p class="service-tagline">Каждая услуга — законченная система, а не разовая настройка.</p>
+          <div class="service-formula">
+            <p class="service-line">Бюджет утекает, а какая связка сработала — непонятно.</p>
+            <p class="service-line">Настраиваем трафик, аналитику и CRM в одну прозрачную воронку.</p>
+            <p class="service-line service-line--strong">Каждый рубль бюджета видно, сколько принёс лидов.</p>
+          </div>
+          <div class="service-tags">
+            <span class="service-tag">Трафик</span>
+            <span class="service-tag">A/B-тесты</span>
+            <span class="service-tag">CRM</span>
+          </div>
           <button class="service-more" data-service="performance" type="button">Подробнее о составе работ <span class="link-arrow-icon">↗</span></button>
         </div>
         <div class="service-object" aria-hidden="true">
@@ -173,8 +199,16 @@
         <div class="service-block-inner">
           <span class="service-num">03</span>
           <h2 class="service-word">SEO</h2>
-          <p class="service-desc">Выводим сайты в топ выдачи: техническая оптимизация, семантическое ядро и контент, который отвечает на реальные запросы.</p>
-          <p class="service-tagline">Каждая услуга — законченная система, а не разовая настройка.</p>
+          <div class="service-formula">
+            <p class="service-line">Сайт есть, но в поиске его находят только по названию бренда.</p>
+            <p class="service-line">Чиним техническую часть и выстраиваем контент под реальные запросы.</p>
+            <p class="service-line service-line--strong">Трафик растёт не рывками, а стабильно — месяц за месяцем.</p>
+          </div>
+          <div class="service-tags">
+            <span class="service-tag">Техаудит</span>
+            <span class="service-tag">Семантика</span>
+            <span class="service-tag">Позиции</span>
+          </div>
           <button class="service-more" data-service="seo" type="button">Подробнее о составе работ <span class="link-arrow-icon">↗</span></button>
         </div>
         <div class="service-object" aria-hidden="true">
@@ -193,8 +227,16 @@
         <div class="service-block-inner">
           <span class="service-num">04</span>
           <h2 class="service-word">Продакшн</h2>
-          <p class="service-desc">Съёмки, монтаж и моушн-дизайн под каждую площадку — от вертикальных reels до имиджевых роликов.</p>
-          <p class="service-tagline">Каждая услуга — законченная система, а не разовая настройка.</p>
+          <div class="service-formula">
+            <p class="service-line">Контента нужно много, а снимать каждый раз с нуля — дорого.</p>
+            <p class="service-line">Продумываем сценарий, снимаем и монтируем под форматы всех площадок.</p>
+            <p class="service-line service-line--strong">Один съёмочный день закрывает контент на месяц вперёд.</p>
+          </div>
+          <div class="service-tags">
+            <span class="service-tag">Сценарий</span>
+            <span class="service-tag">Съёмка</span>
+            <span class="service-tag">Монтаж</span>
+          </div>
           <button class="service-more" data-service="production" type="button">Подробнее о составе работ <span class="link-arrow-icon">↗</span></button>
         </div>
         <div class="service-object" aria-hidden="true">
@@ -256,44 +298,68 @@
   <div class="cases-frame">
     <span class="cases-bg-text" aria-hidden="true">НАШИ<br>РАБОТЫ</span>
 
+    <!-- масштаб карточек вразнобой (2 крупные — Nord Coffee и Sova Bank —
+         и остальные мельче), а не равномерная сетка, размеры в CSS
+         (.case-card:nth-child). Внутри .case-card-media — hover-подпись
+         (.case-card-hover): при наведении/фокусе плавно проявляется
+         поверх плейсхолдера с названием и тегами услуг — see
+         .case-card-hover в css/style.css -->
     <div class="cases-grid">
       <a href="#" class="case-card" data-speed="0.1" data-reveal>
-        <div class="case-card-media case-card-media--1"><span>N</span></div>
+        <div class="case-card-media case-card-media--1">
+          <span>N</span>
+          <span class="case-card-hover" aria-hidden="true">Nord Coffee<i>SMM · Продакшн</i></span>
+        </div>
         <div class="case-card-body">
           <span class="case-card-name">Nord Coffee</span>
           <span class="case-card-tags"><span>SMM</span><span>Продакшн</span></span>
         </div>
       </a>
       <a href="#" class="case-card" data-speed="-0.08" data-reveal>
-        <div class="case-card-media case-card-media--2"><span>R</span></div>
+        <div class="case-card-media case-card-media--2">
+          <span>R</span>
+          <span class="case-card-hover" aria-hidden="true">Reva Studio<i>Таргет</i></span>
+        </div>
         <div class="case-card-body">
           <span class="case-card-name">Reva Studio</span>
           <span class="case-card-tags"><span>Таргет</span></span>
         </div>
       </a>
       <a href="#" class="case-card" data-speed="0.14" data-reveal>
-        <div class="case-card-media case-card-media--3"><span>A</span></div>
+        <div class="case-card-media case-card-media--3">
+          <span>A</span>
+          <span class="case-card-hover" aria-hidden="true">Alma Clinic<i>SEO</i></span>
+        </div>
         <div class="case-card-body">
           <span class="case-card-name">Alma Clinic</span>
           <span class="case-card-tags"><span>SEO</span></span>
         </div>
       </a>
       <a href="#" class="case-card" data-speed="-0.1" data-reveal>
-        <div class="case-card-media case-card-media--4"><span>F</span></div>
+        <div class="case-card-media case-card-media--4">
+          <span>F</span>
+          <span class="case-card-hover" aria-hidden="true">Format Wear<i>Продакшн · SMM</i></span>
+        </div>
         <div class="case-card-body">
           <span class="case-card-name">Format Wear</span>
           <span class="case-card-tags"><span>Продакшн</span><span>SMM</span></span>
         </div>
       </a>
       <a href="#" class="case-card" data-speed="0.08" data-reveal>
-        <div class="case-card-media case-card-media--5"><span>S</span></div>
+        <div class="case-card-media case-card-media--5">
+          <span>S</span>
+          <span class="case-card-hover" aria-hidden="true">Sova Bank<i>SMM · Таргет</i></span>
+        </div>
         <div class="case-card-body">
           <span class="case-card-name">Sova Bank</span>
           <span class="case-card-tags"><span>SMM</span><span>Таргет</span></span>
         </div>
       </a>
       <a href="#" class="case-card" data-speed="-0.12" data-reveal>
-        <div class="case-card-media case-card-media--6"><span>P</span></div>
+        <div class="case-card-media case-card-media--6">
+          <span>P</span>
+          <span class="case-card-hover" aria-hidden="true">Panorama<i>Продакшн · SEO</i></span>
+        </div>
         <div class="case-card-body">
           <span class="case-card-name">Panorama</span>
           <span class="case-card-tags"><span>Продакшн</span><span>SEO</span></span>
@@ -307,6 +373,30 @@
     <span class="services-rec"><i></i>REC</span>
   </div>
 
+</section>
+
+<!-- ================= КЛИЕНТЫ — бегущая строка между «Кейсами» и
+     «Контактами». Без своего [data-theme]: сознательно не создаёт
+     новую опору темы, просто наследует то же самое непрерывное значение
+     --bg/--fg, что и до неё в этой точке скролла (переход тёмный→светлый
+     уже идёт от границы «Кейсы→Контакты» выше) — единое полотно, а не
+     ещё один блок со своим фоном. Имена — те же клиенты, что и в
+     «Кейсах» выше, не отдельный придуманный список. ================= -->
+<section class="clients-marquee" aria-label="Клиенты">
+  <div class="clients-marquee-track" aria-hidden="true">
+    <span class="clients-marquee-item">Nord Coffee</span>
+    <span class="clients-marquee-item">Reva Studio</span>
+    <span class="clients-marquee-item">Alma Clinic</span>
+    <span class="clients-marquee-item">Format Wear</span>
+    <span class="clients-marquee-item">Sova Bank</span>
+    <span class="clients-marquee-item">Panorama</span>
+    <span class="clients-marquee-item">Nord Coffee</span>
+    <span class="clients-marquee-item">Reva Studio</span>
+    <span class="clients-marquee-item">Alma Clinic</span>
+    <span class="clients-marquee-item">Format Wear</span>
+    <span class="clients-marquee-item">Sova Bank</span>
+    <span class="clients-marquee-item">Panorama</span>
+  </div>
 </section>
 
 <!-- ================= КОНТАКТЫ (ex. Сцена C) — обычный поток, светлая тема ================= -->
@@ -357,17 +447,25 @@
   </div>
 </section>
 
-<!-- ================= ФУТЕР — новая финальная секция, светлая тема,
-     продолжает тему «Контактов» без перехода (та же опора, см.
-     css/style.css). Контакты/соцсети — честный плейсхолдер, заменить
-     на реальные при запуске. ================= -->
+<!-- ================= ФИНАЛЬНЫЙ CTA — отдельная полноэкранная сцена
+     (по образцу "So — what is your idea?" у референса), сама по себе,
+     до информационного футера ниже. Та же опора темы, что у «Контактов»
+     и .site-footer (все три — light, переход между ними не идёт, см.
+     css/style.css). ================= -->
+<section class="footer-cta" id="footerCta" data-theme="light">
+  <span class="footer-cta-index">04<i></i>Контакты</span>
+  <p class="footer-cta-headline reveal-block" data-reveal>Есть идея?<br>Давайте обсудим.</p>
+</section>
+
+<!-- ================= ФУТЕР — информационная панель под CTA-сценой,
+     светлая тема, продолжает тему «Контактов»/CTA-сцены без перехода
+     (та же опора, см. css/style.css). Контакты/соцсети — честный
+     плейсхолдер, заменить на реальные при запуске. ================= -->
 <footer class="site-footer" id="siteFooter" data-theme="light">
   <div class="site-footer-inner reveal-block" data-reveal>
-    <p class="site-footer-cta">Есть идея?<br>Давайте обсудим.</p>
-
     <div class="site-footer-grid">
       <div class="site-footer-col">
-        <span class="eyebrow">Контакты</span>
+        <span class="eyebrow">Заявки</span>
         <!-- плейсхолдер-контакты — заменить на реальные перед запуском -->
         <a href="mailto:hello@growflow.ru" class="site-footer-link">hello@growflow.ru</a>
         <a href="tel:+70000000000" class="site-footer-link">+7 000 000-00-00</a>
