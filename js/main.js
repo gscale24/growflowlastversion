@@ -350,6 +350,80 @@ window.addEventListener('scroll', () => {
   }
 }, { passive: true });
 
+/* ==================================================================
+   УСЛУГИ — предметная картинка каждого блока анимирована покадровой
+   секвенцией (assets/frames/<key>/f_NNN.jpg), кадр строго завязан на
+   прогресс скролла самого блока — не автовоспроизведение, а честный
+   скраббинг, тот же принцип, что и у сцены «Знакомство» (makeCoverScrubber),
+   только прогресс считается не от пина на весь экран, а от прохода
+   .service-block через вьюпорт: 0 — блок только показался снизу,
+   1 — блок целиком ушёл наверх. Тримы и число кадров под каждый ролик
+   подобраны по факту происходящего в нём: SMM и SEO — цикл вращения/
+   покачивания на весь ролик, Таргет и Продакшн — обрезаны до момента
+   попадания стрелы / выхода лампочки на пик яркости, дальше не тянут
+   лишний "отыгранный" хвост. Кадры весят на порядок меньше вырезанного
+   видео (нет теряющегося на статичной сцене межкадрового сжатия), а
+   произвольный доступ к любому кадру — то, чего от сжатого H.264-потока
+   с одним ключевым кадром на весь ролик получить не выйдет.
+
+   Прогресс считается не от входа/выхода блока за края вьюпорта целиком
+   (тогда развязка — удар стрелы, разгорание лампочки — приходилась бы
+   почти на самый край экрана, где карточку уже толком не видно), а от
+   прохода карточки через центр вьюпорта: 0 — центр карточки ещё на
+   SERVICE_SCRUB_RANGE/2 ниже центра экрана, 1 — уже настолько же выше.
+   Это самая "читаемая" зона — там же читатель и разглядывает карточку —
+   и вся анимация укладывается в неё, а не размазывается по зонам, где
+   карточка едва видна вверху/внизу экрана. */
+const SERVICE_SCRUB_FRAMES = { smm: 40, target: 32, seo: 40, production: 40 };
+function serviceFramePath(key, i) {
+  return `assets/frames/${key}/f_${String(i + 1).padStart(3, '0')}.jpg`;
+}
+const serviceScrubEls = Array.from(document.querySelectorAll('.service-block')).map((block) => {
+  const img = block.querySelector('.service-object-frame');
+  const key = img && img.dataset.frames;
+  const count = key ? SERVICE_SCRUB_FRAMES[key] : 0;
+  return count ? { block, img, key, count, warmed: false, centerY: 0, lastIndex: 0 } : null;
+}).filter(Boolean);
+
+function measureServiceScrub() {
+  serviceScrubEls.forEach((s) => {
+    const rect = s.block.getBoundingClientRect();
+    s.centerY = rect.top + window.scrollY + rect.height / 2;
+  });
+}
+measureServiceScrub();
+window.addEventListener('resize', measureServiceScrub);
+window.addEventListener('load', measureServiceScrub);
+
+// прогрев кэша браузера кадрами конкретного блока — по факту первого
+// приближения к вьюпорту, а не при загрузке страницы: без него первый
+// проход скролла по кадрам, ещё не побывавшим в кэше, дёргался бы
+function warmServiceFrames(s) {
+  if (s.warmed) return;
+  s.warmed = true;
+  for (let i = 0; i < s.count; i++) {
+    const preload = new Image();
+    preload.src = serviceFramePath(s.key, i);
+  }
+}
+
+// не гейтится prefersNoParallax/prefersReducedMotion — как и scrubA у
+// «Знакомства», это не автопроигрывание и не декоративный параллакс, а
+// прямое отражение прокрутки: кадр всегда 1:1 со скроллом пользователя
+function updateServiceScrub(scrollPos) {
+  const viewportCenter = scrollPos + window.innerHeight / 2;
+  const range = Math.max(560, window.innerHeight * 0.8);
+  serviceScrubEls.forEach((s) => {
+    const d = s.centerY - viewportCenter;
+    const progress = Math.max(0, Math.min(1, (range / 2 - d) / range));
+    const idx = Math.round(progress * (s.count - 1));
+    if (idx !== s.lastIndex || !s.img.src) {
+      s.lastIndex = idx;
+      s.img.src = serviceFramePath(s.key, idx);
+    }
+  });
+}
+
 // услуги — особый случай: появляются при скролле вниз и точно так же
 // плавно исчезают при скролле вверх (не одноразовый reveal), направление
 // влёта берём из scrollDirection на момент срабатывания
@@ -357,13 +431,9 @@ const serviceRevealObserver = new IntersectionObserver((entries) => {
   entries.forEach((entry) => {
     entry.target.dataset.dir = scrollDirection;
     entry.target.classList.toggle('is-visible', entry.isIntersecting);
-    const video = entry.target.querySelector('.service-object-video');
-    if (!video) return;
     if (entry.isIntersecting) {
-      if (!video.src && video.dataset.src) video.src = video.dataset.src;
-      video.play().catch(() => {});
-    } else {
-      video.pause();
+      const s = serviceScrubEls.find((x) => x.block === entry.target);
+      if (s) warmServiceFrames(s);
     }
   });
 }, { threshold: 0.15, rootMargin: '0px 0px -8% 0px' });
@@ -685,6 +755,7 @@ function frameTick(now) {
 
   scrubA.update(smoothY);
   updateServiceParallax(smoothY);
+  updateServiceScrub(smoothY);
   updateCasesParallax(smoothY);
   updateCasesTexture(smoothY);
   updateTheme(smoothY);
@@ -715,6 +786,7 @@ if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     smoothY = window.scrollY;
     scrubA.update(smoothY);
     updateServiceParallax(smoothY);
+    updateServiceScrub(smoothY);
     updateCasesParallax(smoothY);
     updateCasesTexture(smoothY);
     updateTheme(smoothY);

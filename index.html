@@ -26,19 +26,22 @@
 
 <!--
   ═══════════════════════════════════════════════════════════
-  ВНИМАНИЕ: видео на сайте — hero (assets/hero.mp4) и кадровая
-  секвенция «Знакомство» (assets/frames/sceneA, 24 кадра, вырезаны из
-  реального вертикального ролика «Интро_Финалка_2», один непрерывный
-  дубль без монтажных склеек; см. README). Тема
-  каждой секции задаётся атрибутом
+  ВНИМАНИЕ: видео на сайте — только hero (assets/hero.mp4). Все
+  остальные скроллозависимые картинки — кадровые секвенции, не видео:
+  «Знакомство» (assets/frames/sceneA, 24 кадра, вырезаны из реального
+  вертикального ролика «Интро_Финалка_2», один непрерывный дубль без
+  монтажных склеек; см. README) и предметные карточки услуг
+  (assets/frames/{smm,target,seo,production}, см. updateServiceScrub в
+  js/main.js) — кадр в обоих случаях строго завязан на прогресс скролла.
+  Тема каждой секции задаётся атрибутом
   [data-theme] (см. css/style.css), фон непрерывно перетекает через
   #bgLayer при скролле (см. updateTheme в js/main.js), без чередования
   по карточкам — по разделам, в порядке документа: Начало тёмный, Услуги
   светлые, Знакомство тёмное, Кейсы тёмные (та же опора, что и
   Знакомство — перехода между ними нет), Контакты и Футер светлые
   (тоже одна опора, без перехода — см. ниже).
-  Карточки-плейсхолдеры в услугах (.service-object) и кейсах (.case-card-media)
-  ждут реальной съёмки. Телефон-мокап в контактах — концепт, заменить на съёмку.
+  Карточки-плейсхолдеры в кейсах (.case-card-media) ждут реальной съёмки.
+  Телефон-мокап в контактах — концепт, заменить на съёмку.
   Контакты/соцсети в футере — честный плейсхолдер, заменить на реальные.
   ═══════════════════════════════════════════════════════════
 -->
@@ -147,7 +150,7 @@
         <div class="service-object" aria-hidden="true">
           <div class="service-object-parallax">
             <div class="service-object-card">
-              <video class="service-object-video" data-src="assets/services/smm.mp4" muted loop playsinline preload="none"></video>
+              <img class="service-object-frame" data-frames="smm" src="assets/frames/smm/f_001.jpg" alt="">
             </div>
           </div>
         </div>
@@ -172,7 +175,7 @@
         <div class="service-object" aria-hidden="true">
           <div class="service-object-parallax">
             <div class="service-object-card">
-              <video class="service-object-video" data-src="assets/services/target.mp4" muted loop playsinline preload="none"></video>
+              <img class="service-object-frame" data-frames="target" src="assets/frames/target/f_001.jpg" alt="">
             </div>
           </div>
         </div>
@@ -197,7 +200,7 @@
         <div class="service-object" aria-hidden="true">
           <div class="service-object-parallax">
             <div class="service-object-card">
-              <video class="service-object-video" data-src="assets/services/seo.mp4" muted loop playsinline preload="none"></video>
+              <img class="service-object-frame" data-frames="seo" src="assets/frames/seo/f_001.jpg" alt="">
             </div>
           </div>
         </div>
@@ -222,7 +225,7 @@
         <div class="service-object" aria-hidden="true">
           <div class="service-object-parallax">
             <div class="service-object-card">
-              <video class="service-object-video" data-src="assets/services/production.mp4" muted loop playsinline preload="none"></video>
+              <img class="service-object-frame" data-frames="production" src="assets/frames/production/f_001.jpg" alt="">
             </div>
           </div>
         </div>
