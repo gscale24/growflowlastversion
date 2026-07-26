@@ -357,6 +357,14 @@ const serviceRevealObserver = new IntersectionObserver((entries) => {
   entries.forEach((entry) => {
     entry.target.dataset.dir = scrollDirection;
     entry.target.classList.toggle('is-visible', entry.isIntersecting);
+    const video = entry.target.querySelector('.service-object-video');
+    if (!video) return;
+    if (entry.isIntersecting) {
+      if (!video.src && video.dataset.src) video.src = video.dataset.src;
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
   });
 }, { threshold: 0.15, rootMargin: '0px 0px -8% 0px' });
 document.querySelectorAll('.service-block').forEach((el) => serviceRevealObserver.observe(el));
