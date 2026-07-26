@@ -220,6 +220,21 @@ introRevealObserver.observe(document.querySelector('.intro-sticky'));
 const bgLayer = document.getElementById('bgLayer');
 const rootStyle = document.documentElement.style;
 const serviceTabs = Array.from(document.querySelectorAll('.services-tab'));
+const serviceVisuals = Array.from(document.querySelectorAll('.service-visual'));
+// границы всей группы «Услуг» — .service-visual (position:fixed на весь
+// экран) обязан гаснуть за её пределами, иначе currentService, однажды
+// выставленный последней услугой, так и остался бы navigation ссылкой
+// без сброса, и полноэкранная картинка Продакшна осталась бы висеть
+// поверх «Кейсов»/«Контактов»
+const servicesGroupEl = document.getElementById('sceneB');
+let servicesTop = 0, servicesBottom = 0;
+function measureServicesBounds() {
+  servicesTop = servicesGroupEl.getBoundingClientRect().top + window.scrollY;
+  servicesBottom = servicesTop + servicesGroupEl.offsetHeight;
+}
+measureServicesBounds();
+window.addEventListener('resize', measureServicesBounds);
+window.addEventListener('load', measureServicesBounds);
 
 // цветовые опоры тем — те же значения, что раньше жили в [data-theme] CSS
 const THEME_RGB = {
@@ -322,6 +337,16 @@ function updateTheme(scrollPos) {
   if (currentService) {
     serviceTabs.forEach((tab) => tab.classList.toggle('is-active', tab.dataset.service === currentService));
   }
+  // та же currentService двигает и полноэкранную картинку услуги —
+  // ровно одна активна в любой момент, кросс-фейд между ними ведёт CSS
+  // (transition на .service-visual); insideServices гасит все четыре,
+  // как только «Услуги» вообще ушли за пределы вьюпорта — иначе
+  // currentService, однажды выставленный, остался бы висеть и поверх
+  // «Кейсов»/«Контактов»
+  const insideServices = center >= servicesTop && center <= servicesBottom;
+  serviceVisuals.forEach((v) => {
+    v.classList.toggle('is-active', insideServices && v.dataset.service === currentService);
+  });
 }
 
 /* ==================================================================
@@ -351,53 +376,51 @@ window.addEventListener('scroll', () => {
 }, { passive: true });
 
 /* ==================================================================
-   УСЛУГИ — предметная картинка каждого блока анимирована покадровой
+   УСЛУГИ — предметная картинка каждой услуги анимирована покадровой
    секвенцией (assets/frames/<key>/f_NNN.jpg), кадр строго завязан на
-   прогресс скролла самого блока — не автовоспроизведение, а честный
-   скраббинг, тот же принцип, что и у сцены «Знакомство» (makeCoverScrubber),
-   только прогресс считается не от пина на весь экран, а от прохода
-   .service-block через вьюпорт: 0 — блок только показался снизу,
-   1 — блок целиком ушёл наверх. Тримы и число кадров под каждый ролик
-   подобраны по факту происходящего в нём: SMM и SEO — цикл вращения/
-   покачивания на весь ролик, Таргет и Продакшн — обрезаны до момента
-   попадания стрелы / выхода лампочки на пик яркости, дальше не тянут
-   лишний "отыгранный" хвост. Кадры весят на порядок меньше вырезанного
-   видео (нет теряющегося на статичной сцене межкадрового сжатия), а
-   произвольный доступ к любому кадру — то, чего от сжатого H.264-потока
-   с одним ключевым кадром на весь ролик получить не выйдет.
+   прогресс скролла — не автовоспроизведение, а честный скраббинг, тот
+   же принцип, что и у сцены «Знакомство» (makeCoverScrubber). Тримы и
+   число кадров под каждый ролик подобраны по факту происходящего в нём:
+   SMM и SEO — цикл вращения/покачивания на весь ролик, Таргет и
+   Продакшн — обрезаны до момента попадания стрелы / выхода лампочки на
+   пик яркости, дальше не тянут лишний "отыгранный" хвост. Кадры весят
+   на порядок меньше вырезанного видео (нет теряющегося на статичной
+   сцене межкадрового сжатия), а произвольный доступ к любому кадру —
+   то, чего от сжатого H.264-потока с одним ключевым кадром на весь
+   ролик получить не выйдет.
 
-   Прогресс считается не от входа/выхода блока за края вьюпорта целиком
-   (тогда развязка — удар стрелы, разгорание лампочки — приходилась бы
-   почти на самый край экрана, где карточку уже толком не видно), а от
-   прохода карточки через центр вьюпорта: 0 — центр карточки ещё на
-   SERVICE_SCRUB_RANGE/2 ниже центра экрана, 1 — уже настолько же выше.
-   Это самая "читаемая" зона — там же читатель и разглядывает карточку —
-   и вся анимация укладывается в неё, а не размазывается по зонам, где
-   карточка едва видна вверху/внизу экрана. */
+   Прогресс считается от "активного окна" конкретной услуги — того же
+   самого промежутка, на который завязана подсветка вкладки и currentService
+   в updateTheme ниже: 0 — сервис только что стал текущим (его .service-block
+   докрутился до центра вьюпорта), 1 — вот-вот станет текущим следующий.
+   Ровно тот же промежуток, что и у полноэкранной картинки (.service-visual,
+   см. updateTheme и css/style.css) — оба гарантированно синхронны, потому
+   что оба меряются от одних и тех же .service-block. */
 const SERVICE_SCRUB_FRAMES = { smm: 40, target: 32, seo: 40, production: 40 };
-// точка (доля половины диапазона, -1..1), в которой анимация обязана
+// доля своего "активного окна" (0..1), за которую анимация обязана
 // доиграть до последнего кадра и дальше держать его неподвижным. По
-// умолчанию (target/seo/production) это -1 — самый верх диапазона,
-// т.е. с центра экрана и до конца прохода карточка ещё может доигрывать
-// развязку (удар стрелы, разгорание лампочки). SMM — 0: вращение
-// логотипов обязано остановиться на собранном кадре ровно к моменту,
-// когда карточка дошла до центра экрана — читатель долистал до SMM, а
-// не продолжает видеть бесконечно крутящуюся картинку, пока читает текст
-const SERVICE_SCRUB_SETTLE = { smm: 0 };
+// умолчанию (seo/production) это 1 — доигрывает весь путь, вплоть до
+// передачи следующей услуге. Таргет — 0.18: стрела обязана уже сидеть
+// в мишени практически сразу, как читатель долистал до этой услуги, а
+// не только в конце чтения. SMM — 0.45: вращение логотипов останав-
+// ливается на собранном кадре заметно раньше конца, а не тянется на
+// всё время чтения текста
+const SERVICE_SCRUB_SETTLE = { smm: 0.45, target: 0.18 };
 function serviceFramePath(key, i) {
   return `assets/frames/${key}/f_${String(i + 1).padStart(3, '0')}.jpg`;
 }
 const serviceScrubEls = Array.from(document.querySelectorAll('.service-block')).map((block) => {
-  const img = block.querySelector('.service-object-frame');
+  const img = block.querySelector('.service-visual-frame');
   const key = img && img.dataset.frames;
   const count = key ? SERVICE_SCRUB_FRAMES[key] : 0;
-  return count ? { block, img, key, count, warmed: false, centerY: 0, lastIndex: 0 } : null;
+  return count ? { block, img, key, count, warmed: false, top: 0, height: 0, lastIndex: 0 } : null;
 }).filter(Boolean);
 
 function measureServiceScrub() {
   serviceScrubEls.forEach((s) => {
     const rect = s.block.getBoundingClientRect();
-    s.centerY = rect.top + window.scrollY + rect.height / 2;
+    s.top = rect.top + window.scrollY;
+    s.height = rect.height;
   });
 }
 measureServiceScrub();
@@ -420,13 +443,11 @@ function warmServiceFrames(s) {
 // «Знакомства», это не автопроигрывание и не декоративный параллакс, а
 // прямое отражение прокрутки: кадр всегда 1:1 со скроллом пользователя
 function updateServiceScrub(scrollPos) {
-  const viewportCenter = scrollPos + window.innerHeight / 2;
-  const range = Math.max(560, window.innerHeight * 0.8);
+  const center = scrollPos + window.innerHeight / 2;
   serviceScrubEls.forEach((s) => {
-    const d = s.centerY - viewportCenter;
-    const settleFrac = SERVICE_SCRUB_SETTLE[s.key] ?? -1;
-    const settleD = (settleFrac * range) / 2;
-    const progress = Math.max(0, Math.min(1, (range / 2 - d) / (range / 2 - settleD)));
+    const settle = SERVICE_SCRUB_SETTLE[s.key] ?? 1;
+    const raw = (center - s.top) / s.height;
+    const progress = Math.max(0, Math.min(1, raw / settle));
     const idx = Math.round(progress * (s.count - 1));
     if (idx !== s.lastIndex || !s.img.src) {
       s.lastIndex = idx;
@@ -633,53 +654,6 @@ if (!prefersNoParallax) {
 }
 
 /* ==================================================================
-   УСЛУГИ — «ниспадающие картинки»: непрерывный скролл-параллакс на
-   правой картинке-плейсхолдере (.service-object-parallax), той же
-   формулой, что и у карточек «Кейсов» выше. Независим от разового
-   направленного влёта при входе в вьюпорт (тот остаётся на
-   .service-object, CSS-transition) и от покачивания (то остаётся на
-   .service-object-card, CSS-animation) — три вложенных узла, три
-   независимых transform, ни один не затирает другой. Картинка не просто
-   один раз "влетает", а всё время слегка едет медленнее/быстрее текста
-   по мере скролла — оттого и читается как "ниспадающая", а не просто
-   разово появившаяся.
-   ================================================================== */
-const SERVICE_PARALLAX_SPEED = 0.1;
-// у карточек «Кейсов» тот же приём без ограничения работает нормально,
-// потому что доска карточек невысокая (сотни px) — там (centerY -
-// viewportCenter) физически не бывает огромным. Карточка услуги же
-// видна (opacity, is-visible) уже при пороге пересечения 15% — то есть
-// почти сразу, когда центр вьюпорта ещё далеко от центра всего блока
-// (min-height:86vh) — без ограничения множитель * дельту уносил
-// картинку на 200+px от своего текста, композиция разваливалась.
-// Клип держит эффект "стекает мимо текста при скролле", но не даёт
-// картинке оторваться от строки.
-const SERVICE_PARALLAX_MAX = 46;
-const serviceParallaxEls = Array.from(document.querySelectorAll('.service-object-parallax')).map(el => ({
-  el, centerY: 0,
-}));
-function measureServiceParallax() {
-  serviceParallaxEls.forEach(s => {
-    const rect = s.el.getBoundingClientRect();
-    s.centerY = rect.top + window.scrollY + rect.height / 2;
-  });
-}
-function updateServiceParallax(scrollPos) {
-  if (prefersNoParallax || !serviceParallaxEls.length) return;
-  const viewportCenter = scrollPos + window.innerHeight / 2;
-  serviceParallaxEls.forEach(s => {
-    const raw = (s.centerY - viewportCenter) * SERVICE_PARALLAX_SPEED;
-    const offset = Math.max(-SERVICE_PARALLAX_MAX, Math.min(SERVICE_PARALLAX_MAX, raw));
-    s.el.style.transform = `translateY(${offset.toFixed(1)}px)`;
-  });
-}
-if (!prefersNoParallax) {
-  measureServiceParallax();
-  window.addEventListener('resize', measureServiceParallax);
-  window.addEventListener('load', measureServiceParallax);
-}
-
-/* ==================================================================
    КЕЙСЫ — атмосферная текстура (блики + зерно), см. .cases-texture в
    css/style.css. Один непрерывный fixed-слой на весь сайт, прозрачность
    которого — гладкая функция позиции скролла: плавно наплывает при
@@ -765,7 +739,6 @@ function frameTick(now) {
   if (diff < 0.4) smoothY = targetY;
 
   scrubA.update(smoothY);
-  updateServiceParallax(smoothY);
   updateServiceScrub(smoothY);
   updateCasesParallax(smoothY);
   updateCasesTexture(smoothY);
@@ -796,7 +769,6 @@ if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
   window.addEventListener('scroll', () => {
     smoothY = window.scrollY;
     scrubA.update(smoothY);
-    updateServiceParallax(smoothY);
     updateServiceScrub(smoothY);
     updateCasesParallax(smoothY);
     updateCasesTexture(smoothY);
