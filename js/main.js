@@ -164,9 +164,10 @@ const scrubA = makeCoverScrubber({
   },
 });
 
-// стык hero → «Знакомство»: без этого канвас с первым же пикселем в
-// вьюпорте уже стоит в полной яркости — рядом с гаснущим hero это
-// читается как щелчок, а не переход. rootMargin с большим отступом
+// стык предыдущей секции → «Знакомство» (сейчас это Услуги, но код не
+// завязан на конкретного соседа): без этого канвас с первым же пикселем
+// в вьюпорте уже стоит в полной яркости — это читается как щелчок, а не
+// переход. rootMargin с большим отступом
 // снизу срабатывает, пока секция ещё на ~40% высоты экрана ниже
 // вьюпорта — за время transition (см. .intro-sticky canvas в
 // css/style.css) канвас успевает выйти на полную непрозрачность
@@ -633,10 +634,13 @@ function updateHero(scrollPos) {
    ================================================================== */
 const progressFill = document.getElementById('progressFill');
 const railStops = Array.from(document.querySelectorAll('.progress-rail-stops li'));
+// порядок ключей значим: activeKey ниже — это последняя пройденная
+// опора, поэтому объект должен идти в реальном порядке разделов в
+// документе (сейчас — Знакомство после Услуг, не сразу после hero)
 const stopSections = {
   hero: heroEl,
-  sceneA: document.getElementById('sceneA'),
   sceneB: document.getElementById('sceneB'),
+  sceneA: document.getElementById('sceneA'),
   work: document.getElementById('work'),
   sceneC: document.getElementById('sceneC'),
 };
