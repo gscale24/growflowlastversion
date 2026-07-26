@@ -203,8 +203,20 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
 .progress-rail-stops li.is-active span{opacity:1;transform:translateX(0);color:var(--fg);}
 @media (max-width:820px){ .progress-rail{display:none;} }
 
-/* ============ HERO ============ */
-.hero{position:relative;height:100vh;min-height:600px;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+/* ============ HERO — «карточка», из-под которой выезжают «Услуги» ============
+   .hero-pin — распорка выше своего sticky-содержимого (100vh + 50vh
+   запаса на сам выезд), задаёт дистанцию скролла, на которой «Начало»
+   держится неподвижно, пока следующая секция въезжает поверх. .hero
+   внутри — sticky, а не fixed: за счёт лишней высоты родителя сам
+   отлипает и просто уезжает вверх обычным потоком, когда .hero-pin
+   заканчивается — не нужно вручную возвращать документу высоту (как
+   пришлось бы при fixed) и нет риска, что hero "просвечивает" где-то
+   ниже по странице. z-index:1 — только чтобы .services-group (ниже,
+   z-index:2 + непрозрачный фон) гарантированно рисовалась поверх, а не
+   наоборот (у sticky-элемента всегда свой стек, обычный контент без
+   позиционирования иначе оказывается под ним независимо от DOM-порядка). */
+.hero-pin{position:relative;height:150vh;}
+.hero{position:sticky;top:0;z-index:1;height:100vh;min-height:600px;overflow:hidden;display:flex;align-items:center;justify-content:center;}
 /* object-position: center — герой снят почти симметрично (человек и
    клавиатура по центру кадра), проверено кроп-симуляцией и на 375px:
    центр держит в кадре руки/клавиатуру/телефон без отдельного мобильного
@@ -283,10 +295,10 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
 .cue-line i{position:absolute;top:-40px;left:0;width:100%;height:40%;background:var(--accent);animation:cueDrop 1.8s ease-in-out infinite;}
 @keyframes cueDrop{0%{top:-40%;}100%{top:100%;}}
 
-/* HUD-строка технических индикаторов hero — статус студии + REC +
-   счётчик, по образцу технических readout'ов у референса. Тот же
-   mono/uppercase язык, что и у .services-index/.services-rec ниже по
-   странице — не новый визуальный приём, а его первое появление. */
+/* HUD-строка технических индикаторов hero — статус студии + счётчик,
+   по образцу технических readout'ов у референса. Тот же mono/uppercase
+   язык, что и у .services-index ниже по странице — не новый визуальный
+   приём, а его первое появление. */
 .hero-meta{
   position:absolute;top:28px;left:0;right:0;z-index:2;
   display:flex;align-items:center;justify-content:space-between;
@@ -295,13 +307,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
   color:var(--fg-dim);
 }
 .hero-meta-item{display:flex;align-items:center;gap:7px;}
-.hero-meta-item--rec i{
-  width:6px;height:6px;border-radius:50%;background:#e0453a;
-  animation:servicesRecPulse 1.6s ease-in-out infinite;
-}
 @media (max-width:820px){
   .hero-meta{top:20px;font-size:9.5px;gap:10px;}
-  .hero-meta-item:nth-child(3){display:none;}
 }
 
 /* ============ ОБЩИЙ ПОТОК: главы + плавный reveal-по-скроллу ============ */
@@ -380,7 +387,12 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
    перекрашивается через общий #bg-layer. Никакого sticky-канваса —
    вкладки просто прилипают тонким рейлом сбоку, контент скроллится как
    обычная страница, как в референсе kookie-kollective.com. */
-.services-group{position:relative;}
+/* z-index выше, чем у sticky .hero (1), и собственный непрозрачный фон —
+   вместе с .hero-pin выше это и даёт эффект выезжающей поверх «Начала»
+   карточки: без сплошного background тут был бы виден sticky hero сквозь
+   секцию, пока она едет по нему (--bg — та же переменная, что и всюду на
+   странице, следует общей непрерывной смене темы, не хардкод) */
+.services-group{position:relative;z-index:2;background:var(--bg);box-shadow:0 -40px 60px -20px rgba(0,0,0,0.35);}
 
 .services-groupbar{
   z-index:5;
@@ -398,12 +410,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
 .services-index{display:flex;align-items:center;gap:12px;}
 .services-index i{display:block;width:36px;height:1px;background:currentColor;opacity:0.4;}
 .services-brand b{font-weight:400;margin-left:2px;}
-.services-rec{display:flex;align-items:center;gap:7px;}
-.services-rec i{
-  width:6px;height:6px;border-radius:50%;background:#e0453a;
-  animation:servicesRecPulse 1.6s ease-in-out infinite;
-}
-@keyframes servicesRecPulse{0%,100%{opacity:1;}50%{opacity:0.25;}}
 
 /* max-width + auto-margin: на очень широких экранах (>1600px) колонка
    с текстом карточек не должна растягиваться до бесконечности — грид
@@ -648,30 +654,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
 .case-card-media span{
   font-family:var(--serif);font-size:clamp(48px,7vw,90px);color:rgba(12,11,9,0.16);
 }
-/* Hover-подпись поверх плейсхолдера — название + теги услуг, которые
-   уже и так есть ниже в .case-card-body, но здесь появляются ПРЯМО НА
-   превью при наведении/фокусе (плавным подъёмом+фейдом), а не только
-   статично под карточкой. Минимальный вариант "hover-preview" без
-   реальных фото/видео — см. бриф: как только появятся кадры кейсов,
-   сюда же ляжет video/gif поверх статичного превью, эта подпись
-   останется тем же самым hover-слоем поверх них. */
-.case-card-hover{
-  position:absolute;left:0;right:0;bottom:0;z-index:1;
-  display:flex;flex-direction:column;gap:2px;
-  padding:14px 16px 16px;
-  background:linear-gradient(0deg, rgba(12,11,9,0.72) 0%, rgba(12,11,9,0.32) 60%, transparent 100%);
-  color:#f5f2ea;font-family:var(--serif);font-weight:600;font-size:clamp(14px,1.2vw,18px);
-  opacity:0;transform:translateY(10px);
-  transition:opacity .25s var(--ease), transform .25s var(--ease);
-  pointer-events:none;
-}
-.case-card-hover i{
-  font-style:normal;font-family:var(--mono);font-weight:400;font-size:9px;
-  letter-spacing:0.08em;text-transform:uppercase;color:#c9c5ba;
-}
-.case-card:hover .case-card-hover,.case-card:focus-visible .case-card-hover{
-  opacity:1;transform:translateY(0);
-}
 .case-card-media--1{background:linear-gradient(135deg,#dce6ee,#aebfd1);}
 .case-card-media--2{background:linear-gradient(135deg,#e7ded0,#c7b28f);}
 .case-card-media--3{background:linear-gradient(135deg,#dbe3d6,#a9bfa0);}
@@ -696,42 +678,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
   }
   .case-card{position:static;width:100% !important;}
   .case-card{opacity:1;}
-}
-
-/* ---- Клиенты — бегущая строка ----
-   Никакого [data-theme] тут нет специально — секция наследует то
-   значение --fg/--bg, которое уже непрерывно едет в этой точке
-   документа (между «Кейсами» и «Контактами»), не открывая новую опору.
-   Строка продублирована дважды в разметке (12 элементов = 2 полных
-   набора) — анимация едет ровно на -50% ширины трека, так что момент
-   "склейки" конца первого набора с началом второго неотличим от
-   середины любого другого набора: бесшовный луп. */
-.clients-marquee{
-  position:relative;overflow:hidden;
-  padding:var(--space-lg) 0;
-  border-top:1px solid var(--line);
-  border-bottom:1px solid var(--line);
-}
-.clients-marquee-track{
-  display:flex;width:max-content;
-  animation:clientsMarquee 32s linear infinite;
-}
-.clients-marquee-item{
-  flex:0 0 auto;display:inline-flex;align-items:center;
-  font-family:var(--serif);font-style:italic;font-weight:500;
-  font-size:clamp(22px,3.2vw,42px);color:var(--fg-dim);
-  padding:0 var(--space-lg);white-space:nowrap;
-}
-.clients-marquee-item::after{
-  content:'✦';font-style:normal;font-size:0.32em;color:var(--line);margin-left:var(--space-lg);
-}
-@keyframes clientsMarquee{
-  from{transform:translateX(0);}
-  to{transform:translateX(-50%);}
-}
-@media (max-width:820px){
-  .clients-marquee-item{padding:0 var(--space-md);}
-  .clients-marquee-item::after{margin-left:var(--space-md);}
 }
 
 /* ---- Service modal ---- */

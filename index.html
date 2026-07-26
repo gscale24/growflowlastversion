@@ -77,19 +77,22 @@
   </ul>
 </nav>
 
-<!-- ================= HERO ================= -->
+<!-- ================= HERO — «Начало» стоит на месте (position:sticky
+     внутри .hero-pin), «Услуги» выезжают поверх него снизу как карточка/
+     выдвижной ящик, дальше — снова обычный непрерывный поток (см.
+     README) ================= -->
+<div class="hero-pin">
 <section class="hero" id="hero">
   <video class="hero-video" autoplay muted loop playsinline poster="assets/hero-poster.jpg" id="heroVideo"></video>
   <div class="hero-fallback" id="heroFallback"></div>
   <div class="hero-grain" aria-hidden="true"></div>
   <div class="hero-overlay"></div>
 
-  <!-- HUD-строка технических индикаторов, по образцу REC/4K-readout'ов
+  <!-- HUD-строка технических индикаторов, по образцу 4K-readout'ов
        у референса — статус студии, а не реальные метрики съёмки -->
   <div class="hero-meta" aria-hidden="true">
-    <span class="hero-meta-item hero-meta-item--rec"><i></i>REC</span>
     <span class="hero-meta-item">AGENCY / FULL CYCLE</span>
-    <span class="hero-meta-item">40+ ПРОЕКТОВ</span>
+    <span class="hero-meta-item hero-meta-item--count">40+ ПРОЕКТОВ</span>
   </div>
 
   <div class="hero-logo">
@@ -103,6 +106,7 @@
     <div class="cue-line"><i></i></div>
   </div>
 </section>
+</div>
 
 <!-- ================= УСЛУГИ — обычный поток, карточки идут одна за другой,
      фон чередует светлую/тёмную тему (разрыв палитры, как на
@@ -241,7 +245,6 @@
 
   <div class="services-groupbar services-groupbar--bottom">
     <span class="services-hint">Скролль дальше</span>
-    <span class="services-rec"><i></i>REC</span>
   </div>
 
 </section>
@@ -302,15 +305,11 @@
 
     <!-- масштаб карточек вразнобой (2 крупные — Nord Coffee и Sova Bank —
          и остальные мельче), а не равномерная сетка, размеры в CSS
-         (.case-card:nth-child). Внутри .case-card-media — hover-подпись
-         (.case-card-hover): при наведении/фокусе плавно проявляется
-         поверх плейсхолдера с названием и тегами услуг — see
-         .case-card-hover в css/style.css -->
+         (.case-card:nth-child) -->
     <div class="cases-grid">
       <a href="#" class="case-card" data-speed="0.1" data-reveal>
         <div class="case-card-media case-card-media--1">
           <span>N</span>
-          <span class="case-card-hover" aria-hidden="true">Nord Coffee<i>SMM · Продакшн</i></span>
         </div>
         <div class="case-card-body">
           <span class="case-card-name">Nord Coffee</span>
@@ -320,7 +319,6 @@
       <a href="#" class="case-card" data-speed="-0.08" data-reveal>
         <div class="case-card-media case-card-media--2">
           <span>R</span>
-          <span class="case-card-hover" aria-hidden="true">Reva Studio<i>Таргет</i></span>
         </div>
         <div class="case-card-body">
           <span class="case-card-name">Reva Studio</span>
@@ -330,7 +328,6 @@
       <a href="#" class="case-card" data-speed="0.14" data-reveal>
         <div class="case-card-media case-card-media--3">
           <span>A</span>
-          <span class="case-card-hover" aria-hidden="true">Alma Clinic<i>SEO</i></span>
         </div>
         <div class="case-card-body">
           <span class="case-card-name">Alma Clinic</span>
@@ -340,7 +337,6 @@
       <a href="#" class="case-card" data-speed="-0.1" data-reveal>
         <div class="case-card-media case-card-media--4">
           <span>F</span>
-          <span class="case-card-hover" aria-hidden="true">Format Wear<i>Продакшн · SMM</i></span>
         </div>
         <div class="case-card-body">
           <span class="case-card-name">Format Wear</span>
@@ -350,7 +346,6 @@
       <a href="#" class="case-card" data-speed="0.08" data-reveal>
         <div class="case-card-media case-card-media--5">
           <span>S</span>
-          <span class="case-card-hover" aria-hidden="true">Sova Bank<i>SMM · Таргет</i></span>
         </div>
         <div class="case-card-body">
           <span class="case-card-name">Sova Bank</span>
@@ -360,7 +355,6 @@
       <a href="#" class="case-card" data-speed="-0.12" data-reveal>
         <div class="case-card-media case-card-media--6">
           <span>P</span>
-          <span class="case-card-hover" aria-hidden="true">Panorama<i>Продакшн · SEO</i></span>
         </div>
         <div class="case-card-body">
           <span class="case-card-name">Panorama</span>
@@ -372,33 +366,8 @@
 
   <div class="services-groupbar services-groupbar--bottom">
     <span class="services-hint">Скролль дальше</span>
-    <span class="services-rec"><i></i>REC</span>
   </div>
 
-</section>
-
-<!-- ================= КЛИЕНТЫ — бегущая строка между «Кейсами» и
-     «Контактами». Без своего [data-theme]: сознательно не создаёт
-     новую опору темы, просто наследует то же самое непрерывное значение
-     --bg/--fg, что и до неё в этой точке скролла (переход тёмный→светлый
-     уже идёт от границы «Кейсы→Контакты» выше) — единое полотно, а не
-     ещё один блок со своим фоном. Имена — те же клиенты, что и в
-     «Кейсах» выше, не отдельный придуманный список. ================= -->
-<section class="clients-marquee" aria-label="Клиенты">
-  <div class="clients-marquee-track" aria-hidden="true">
-    <span class="clients-marquee-item">Nord Coffee</span>
-    <span class="clients-marquee-item">Reva Studio</span>
-    <span class="clients-marquee-item">Alma Clinic</span>
-    <span class="clients-marquee-item">Format Wear</span>
-    <span class="clients-marquee-item">Sova Bank</span>
-    <span class="clients-marquee-item">Panorama</span>
-    <span class="clients-marquee-item">Nord Coffee</span>
-    <span class="clients-marquee-item">Reva Studio</span>
-    <span class="clients-marquee-item">Alma Clinic</span>
-    <span class="clients-marquee-item">Format Wear</span>
-    <span class="clients-marquee-item">Sova Bank</span>
-    <span class="clients-marquee-item">Panorama</span>
-  </div>
 </section>
 
 <!-- ================= КОНТАКТЫ (ex. Сцена C) — обычный поток, светлая тема ================= -->

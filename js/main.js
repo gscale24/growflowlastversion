@@ -619,15 +619,12 @@ function updateCasesTexture(scrollPos) {
   casesTexture.style.opacity = Math.min(inT, outT).toFixed(3);
 }
 
-/* ==================================================================
-   HERO → следующая секция (кроссфейд по первым 100vh скролла)
-   ================================================================== */
 const heroEl = document.getElementById('hero');
-function updateHero(scrollPos) {
-  const p = Math.min(1, scrollPos / window.innerHeight);
-  heroEl.style.opacity = String(1 - p);
-  heroEl.style.transform = `scale(${1 + p * 0.06})`;
-}
+// раньше тут был кроссфейд hero по первым 100vh скролла (updateHero) —
+// убран вместе с переходом hero на position:sticky (см. .hero-pin в
+// css/style.css): «Начало» больше не тает само, оно неподвижно стоит
+// на месте, пока «Услуги» выезжают поверх него как карточка/ящик —
+// переход несёт эта визуальная накладка, а не угасание hero
 
 /* ==================================================================
    ИНДИКАТОР ПРОГРЕССА ПО СТРАНИЦЕ
@@ -678,7 +675,6 @@ function frameTick(now) {
   const diff = Math.abs(targetY - smoothY);
   if (diff < 0.4) smoothY = targetY;
 
-  updateHero(smoothY);
   scrubA.update(smoothY);
   updateServiceParallax(smoothY);
   updateCasesParallax(smoothY);
@@ -709,7 +705,6 @@ if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
   window.removeEventListener('scroll', kickScroll);
   window.addEventListener('scroll', () => {
     smoothY = window.scrollY;
-    updateHero(smoothY);
     scrubA.update(smoothY);
     updateServiceParallax(smoothY);
     updateCasesParallax(smoothY);
