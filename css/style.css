@@ -522,9 +522,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
 }
 .service-object-card{
   width:clamp(220px,20vw,300px);aspect-ratio:4/3;overflow:hidden;
-  border:1px solid var(--fg);border-radius:2px;background:var(--bg);
   display:flex;align-items:center;justify-content:center;
-  box-shadow:10px 14px 0 0 rgba(12,11,9,0.08);
   animation:serviceObjectFloat 7s ease-in-out infinite;
 }
 @keyframes serviceObjectFloat{

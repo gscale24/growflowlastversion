@@ -375,6 +375,15 @@ window.addEventListener('scroll', () => {
    и вся анимация укладывается в неё, а не размазывается по зонам, где
    карточка едва видна вверху/внизу экрана. */
 const SERVICE_SCRUB_FRAMES = { smm: 40, target: 32, seo: 40, production: 40 };
+// точка (доля половины диапазона, -1..1), в которой анимация обязана
+// доиграть до последнего кадра и дальше держать его неподвижным. По
+// умолчанию (target/seo/production) это -1 — самый верх диапазона,
+// т.е. с центра экрана и до конца прохода карточка ещё может доигрывать
+// развязку (удар стрелы, разгорание лампочки). SMM — 0: вращение
+// логотипов обязано остановиться на собранном кадре ровно к моменту,
+// когда карточка дошла до центра экрана — читатель долистал до SMM, а
+// не продолжает видеть бесконечно крутящуюся картинку, пока читает текст
+const SERVICE_SCRUB_SETTLE = { smm: 0 };
 function serviceFramePath(key, i) {
   return `assets/frames/${key}/f_${String(i + 1).padStart(3, '0')}.jpg`;
 }
@@ -415,7 +424,9 @@ function updateServiceScrub(scrollPos) {
   const range = Math.max(560, window.innerHeight * 0.8);
   serviceScrubEls.forEach((s) => {
     const d = s.centerY - viewportCenter;
-    const progress = Math.max(0, Math.min(1, (range / 2 - d) / range));
+    const settleFrac = SERVICE_SCRUB_SETTLE[s.key] ?? -1;
+    const settleD = (settleFrac * range) / 2;
+    const progress = Math.max(0, Math.min(1, (range / 2 - d) / (range / 2 - settleD)));
     const idx = Math.round(progress * (s.count - 1));
     if (idx !== s.lastIndex || !s.img.src) {
       s.lastIndex = idx;
