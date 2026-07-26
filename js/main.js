@@ -447,13 +447,17 @@ window.addEventListener('scroll', () => {
 const SERVICE_SCRUB_FRAMES = { smm: 40, target: 32, seo: 40, production: 40 };
 // доля своего "активного окна" (0..1), за которую анимация обязана
 // доиграть до последнего кадра и дальше держать его неподвижным. По
-// умолчанию (seo/production) это 1 — доигрывает весь путь, вплоть до
+// умолчанию (production) это 1 — доигрывает весь путь, вплоть до
 // передачи следующей услуге. Таргет — 0.18: стрела обязана уже сидеть
 // в мишени практически сразу, как читатель долистал до этой услуги, а
-// не только в конце чтения. SMM — 0.6: и без того укороченный до 2
-// секунд ролик доигрывает чуть больше половины окна, а не весь путь —
-// собранный кадр держится неподвижно заметную часть времени чтения
-const SERVICE_SCRUB_SETTLE = { smm: 0.6, target: 0.18 };
+// не только в конце чтения. SMM — 0.6: и без того укороченный ролик
+// доигрывает чуть больше половины окна, а не весь путь — собранный кадр
+// держится неподвижно заметную часть времени чтения. SEO — 0.55: у
+// лупы и без того самое тонкое, вкрадчивое покачивание из всех
+// четырёх — растянутое на все 1 (весь путь), оно читалось как вялое,
+// почти неотзывчивое на скролл; тот же запас кадров на более коротком
+// окне даёт заметно более живой отклик на каждый пиксель прокрутки
+const SERVICE_SCRUB_SETTLE = { smm: 0.6, target: 0.18, seo: 0.55 };
 function serviceFramePath(key, i) {
   return `assets/frames/${key}/f_${String(i + 1).padStart(3, '0')}.jpg`;
 }
@@ -475,17 +479,27 @@ measureServiceScrub();
 window.addEventListener('resize', measureServiceScrub);
 window.addEventListener('load', measureServiceScrub);
 
-// прогрев кэша браузера кадрами конкретного блока — по факту первого
-// приближения к вьюпорту, а не при загрузке страницы: без него первый
-// проход скролла по кадрам, ещё не побывавшим в кэше, дёргался бы
+// прогрев кэша браузера кадрами конкретного блока — заранее, с большим
+// запасом по вьюпорту (см. serviceWarmupObserver ниже), а не в момент,
+// когда блок реально показался: без запаса первый проход скролла по ещё
+// не долетевшим по сети кадрам дёргался бы (пустой/наполовину
+// прогруженный кадр — ровно то, что было видно на скриншотах бага).
+// Каждый Image() держим — не только чтобы браузер закинул байты в кэш,
+// но и чтобы updateServiceScrub мог спросить именно у ЭТОГО объекта,
+// правда ли конкретный кадр уже дозагрузился (.complete)
 function warmServiceFrames(s) {
   if (s.warmed) return;
   s.warmed = true;
+  s.frameImgs = new Array(s.count);
   for (let i = 0; i < s.count; i++) {
-    const preload = new Image();
-    preload.src = serviceFramePath(s.key, i);
+    const im = new Image();
+    im.src = serviceFramePath(s.key, i);
+    s.frameImgs[i] = im;
   }
 }
+// первая услуга — прогреваем сразу, без ожидания приближения к вьюпорту:
+// её и так видно почти сразу после hero, ждать пересечения смысла нет
+if (serviceScrubEls[0]) warmServiceFrames(serviceScrubEls[0]);
 
 // не гейтится prefersNoParallax/prefersReducedMotion — как и scrubA у
 // «Знакомства», это не автопроигрывание и не декоративный параллакс, а
@@ -501,9 +515,14 @@ function updateServiceScrub() {
     const raw = (center - s.top) / s.height;
     const progress = Math.max(0, Math.min(1, raw / settle));
     const idx = Math.round(progress * (s.count - 1));
-    if (idx !== s.lastIndex || !s.img.src) {
+    if (idx === s.lastIndex) return;
+    // кадр показываем только если он реально уже дозагрузился — иначе
+    // оставляем на экране последний успешно показанный (не дёргаем на
+    // пустой/битый src в процессе догрузки, см. warmServiceFrames выше)
+    const im = s.frameImgs && s.frameImgs[idx];
+    if (im && im.complete && im.naturalWidth) {
       s.lastIndex = idx;
-      s.img.src = serviceFramePath(s.key, idx);
+      s.img.src = im.src;
     }
   });
 }
@@ -515,13 +534,24 @@ const serviceRevealObserver = new IntersectionObserver((entries) => {
   entries.forEach((entry) => {
     entry.target.dataset.dir = scrollDirection;
     entry.target.classList.toggle('is-visible', entry.isIntersecting);
-    if (entry.isIntersecting) {
-      const s = serviceScrubEls.find((x) => x.block === entry.target);
-      if (s) warmServiceFrames(s);
-    }
   });
 }, { threshold: 0.15, rootMargin: '0px 0px -8% 0px' });
 document.querySelectorAll('.service-block').forEach((el) => serviceRevealObserver.observe(el));
+
+// прогрев кадров — отдельный наблюдатель с большим запасом (rootMargin
+// растягивает зону пересечения на целый вьюпорт до и после блока), не
+// завязан на serviceRevealObserver специально: тому нужен узкий, точный
+// порог под сам эффект появления текста, а прогреву сети наоборот нужно
+// как можно больше форы, чтобы кадры успели догрузиться из сети раньше,
+// чем реально понадобятся
+const serviceWarmupObserver = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    if (!entry.isIntersecting) return;
+    const s = serviceScrubEls.find((x) => x.block === entry.target);
+    if (s) warmServiceFrames(s);
+  });
+}, { rootMargin: '100% 0px 100% 0px' });
+document.querySelectorAll('.service-block').forEach((el) => serviceWarmupObserver.observe(el));
 
 /* ==================================================================
    УСЛУГИ — вкладки скроллят к своей карточке; хоткеи 1–4 и кнопка

@@ -550,17 +550,30 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
    обрывается жёсткой границей плашки. Один и тот же --bg и для фона
    страницы, и для затемнения — поэтому это по-прежнему одно полотно,
    а не текст на отдельной панели поверх фото. */
+/* не одновременный кросс-фейд (старая тает, новая тут же проступает
+   сквозь неё), а последовательная смена — почти "перелистывание": у
+   выхода нет задержки и он короче (.4s), у входа, наоборот, задержка
+   (.5s) больше длительности выхода — между тем, как одна картинка
+   истаяла, и тем, как проступила следующая, остаётся короткая пауза
+   чистого фона страницы, а не наложение двух картинок друг на друга.
+   translateY общий на оба направления: у выхода едет от 0 обратно к
+   -64px (сцена уходит вверх), у входа — от -64px к 0 (падает сверху
+   вниз, в том числе самый первый раз для SMM после hero) */
 .service-visual{
   position:fixed;inset:0;
   z-index:1;opacity:0;pointer-events:none;
-  transition:opacity .6s var(--ease);
+  transform:translateY(-64px);
+  transition:opacity .4s var(--ease), transform .4s var(--ease);
 }
-.service-visual.is-active{opacity:1;}
-/* мгновенное гашение строго при выходе из всей группы «Услуг» — плавный
-   .6s кросс-фейд уместен между соседними услугами внутри группы, но не
-   когда сцена целиком сменилась: там угасание успевало "просвечивать"
+.service-visual.is-active{
+  opacity:1;transform:translateY(0);
+  transition:opacity .55s var(--ease) .5s, transform .55s var(--ease) .5s;
+}
+/* мгновенное гашение строго при выходе из всей группы «Услуг» — описанная
+   выше хореография уместна между соседними услугами внутри группы, но
+   не когда сцена целиком сменилась: там угасание успевало "просвечивать"
    поверх уже начавшейся следующей секции (см. updateTheme, js/main.js) */
-.service-visual.is-out{transition:none!important;opacity:0!important;}
+.service-visual.is-out{transition:none!important;opacity:0!important;transform:none!important;}
 .service-visual-frame{width:100%;height:100%;object-fit:cover;object-position:62% center;display:block;}
 /* у лупы (SEO) распознаваемая часть — само стекло — снята левее центра
    кадра; общий 62%-сдвиг вправо (нужен остальным трём, чтобы предмет не
