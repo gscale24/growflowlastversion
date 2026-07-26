@@ -380,8 +380,18 @@ function updateTheme(scrollPos) {
   }
   // insideServices гасит все четыре, как только «Услуги» вообще ушли за
   // пределы вьюпорта — иначе currentServiceRaw, однажды выставленный,
-  // остался бы висеть и поверх «Кейсов»/«Контактов»
-  const insideServices = rawCenter >= servicesTop && rawCenter <= servicesBottom && rawScrollY >= heroPinBottom;
+  // остался бы висеть и поверх «Кейсов»/«Контактов». Верхняя граница —
+  // rawScrollY, а не rawCenter (см. heroPinBottom ниже): «Знакомство»
+  // сразу после «Услуг» — pinned-секция (.intro-sticky, position:sticky
+  // top:0), которая реально закрывает экран целиком только когда верх
+  // её 320vh-контейнера доскроллил до верха вьюпорта, т.е. когда
+  // rawScrollY достиг servicesBottom. Если гасить картинку услуги по
+  // rawCenter (раньше на пол-экрана вьюпорта), между её мгновенным
+  // исчезновением и полным "прилипанием" следующей сцены остаётся
+  // честная пустота: сверху — голый фон, снизу — ещё не прилипший край
+  // канваса «Знакомства» (тот самый скриншот-баг с пустым верхом и
+  // тёмным столом только внизу кадра)
+  const insideServices = rawCenter >= servicesTop && rawScrollY < servicesBottom && rawScrollY >= heroPinBottom;
   serviceVisuals.forEach((v) => {
     v.classList.toggle('is-active', insideServices && v.dataset.service === currentServiceRaw);
     // .is-out — мгновенное (без transition) гашение строго при выходе
@@ -465,10 +475,12 @@ function serviceFramePath(key, i) {
   return `assets/frames/${key}/f_${String(i + 1).padStart(3, '0')}.jpg`;
 }
 const serviceScrubEls = Array.from(document.querySelectorAll('.service-block')).map((block) => {
-  const img = block.querySelector('.service-visual-frame');
+  const frameImgs = block.querySelectorAll('.service-visual-frame');
+  const img = frameImgs[0];
+  const imgNext = frameImgs[1];
   const key = img && img.dataset.frames;
   const count = key ? SERVICE_SCRUB_FRAMES[key] : 0;
-  return count ? { block, img, key, count, warmed: false, top: 0, height: 0, lastIndex: 0 } : null;
+  return count ? { block, img, imgNext, key, count, warmed: false, top: 0, height: 0, lastIndex: 0, lastNextIndex: -1 } : null;
 }).filter(Boolean);
 
 function measureServiceScrub() {
@@ -511,22 +523,45 @@ if (serviceScrubEls[0]) warmServiceFrames(serviceScrubEls[0]);
 // большинства других update-функций) — та же причина, что и у
 // insideServices в updateTheme: скрабу нужна точность к реальному
 // скроллу, а не эффект "картинка ещё доезжает" при быстрой прокрутке
+//
+// Кадр держится не одним <img>, а парой (см. .service-visual-frame.is-next
+// в css/style.css): базовый показывает floor(pos), верхний — ceil(pos) и
+// кросс-фейдит поверх него по дробной части pos. На стыке, когда base
+// увеличивается на 1, верхний слой как раз доходит до полной
+// непрозрачности с тем же кадром — переключение происходит визуально
+// незаметно, кадры перетекают один в другой, а не "щёлкают". Раньше
+// показывался ровно один кадр на Math.round(progress) — с 40 кадрами на
+// текст-высоту блока это давало заметный покадровый "степ", особенно
+// там, где само движение в исходнике и без того тонкое (лупа SEO)
 function updateServiceScrub() {
   const center = window.scrollY + window.innerHeight / 2;
   serviceScrubEls.forEach((s) => {
     const settle = SERVICE_SCRUB_SETTLE[s.key] ?? 1;
     const raw = (center - s.top) / s.height;
     const progress = Math.max(0, Math.min(1, raw / settle));
-    const idx = Math.round(progress * (s.count - 1));
-    if (idx === s.lastIndex) return;
+    const pos = progress * (s.count - 1);
+    const baseIdx = Math.floor(pos);
+    const nextIdx = Math.min(s.count - 1, baseIdx + 1);
+    const frac = pos - baseIdx;
     // кадр показываем только если он реально уже дозагрузился — иначе
     // оставляем на экране последний успешно показанный (не дёргаем на
     // пустой/битый src в процессе догрузки, см. warmServiceFrames выше)
-    const im = s.frameImgs && s.frameImgs[idx];
-    if (im && im.complete && im.naturalWidth) {
-      s.lastIndex = idx;
-      s.img.src = im.src;
+    if (baseIdx !== s.lastIndex) {
+      const im = s.frameImgs && s.frameImgs[baseIdx];
+      if (im && im.complete && im.naturalWidth) {
+        s.lastIndex = baseIdx;
+        s.img.src = im.src;
+      }
     }
+    if (nextIdx !== s.lastNextIndex) {
+      const imNext = s.frameImgs && s.frameImgs[nextIdx];
+      if (imNext && imNext.complete && imNext.naturalWidth) {
+        s.lastNextIndex = nextIdx;
+        s.imgNext.src = imNext.src;
+      }
+    }
+    // без transition — привязка к скроллу должна быть жёсткой, 1:1
+    s.imgNext.style.opacity = frac;
   });
 }
 
