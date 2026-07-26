@@ -362,15 +362,35 @@ function updateTheme(scrollPos) {
   if (currentService) {
     serviceTabs.forEach((tab) => tab.classList.toggle('is-active', tab.dataset.service === currentService));
   }
-  // та же currentService двигает и полноэкранную картинку услуги —
-  // ровно одна активна в любой момент, кросс-фейд между ними ведёт CSS
-  // (transition на .service-visual); insideServices гасит все четыре,
-  // как только «Услуги» вообще ушли за пределы вьюпорта — иначе
-  // currentService, однажды выставленный, остался бы висеть и поверх
-  // «Кейсов»/«Контактов»
-  const insideServices = center >= servicesTop && center <= servicesBottom && scrollPos >= heroPinBottom;
+
+  // полноэкранная картинка услуги — НЕ на сглаженном scrollPos, а на
+  // "сырой" window.scrollY. При быстрой прокрутке smoothY (полупериод
+  // сглаживания 80мс) заметно отстаёт от реального скролла — для
+  // плавно едущего фона это незаметно, а вот .service-visual, будучи
+  // fixed на весь экран, при таком отставании оставался виден ПОВЕРХ
+  // уже прокрученной сцены «Знакомство»: экран реально проехал в тёмную
+  // сцену, а лагающий JS ещё считал, что активна услуга — отсюда
+  // призрачное наложение картинки услуги на уже открывшуюся сцену.
+  const rawScrollY = window.scrollY;
+  const rawCenter = rawScrollY + window.innerHeight / 2;
+  let currentServiceRaw = null;
+  for (const s of themeSections) {
+    if (s.docTop <= rawCenter) { if (s.service) currentServiceRaw = s.service; }
+    else break;
+  }
+  // insideServices гасит все четыре, как только «Услуги» вообще ушли за
+  // пределы вьюпорта — иначе currentServiceRaw, однажды выставленный,
+  // остался бы висеть и поверх «Кейсов»/«Контактов»
+  const insideServices = rawCenter >= servicesTop && rawCenter <= servicesBottom && rawScrollY >= heroPinBottom;
   serviceVisuals.forEach((v) => {
-    v.classList.toggle('is-active', insideServices && v.dataset.service === currentService);
+    v.classList.toggle('is-active', insideServices && v.dataset.service === currentServiceRaw);
+    // .is-out — мгновенное (без transition) гашение строго при выходе
+    // из всей группы «Услуг»: плавный кросс-фейд (.6s) там, где он
+    // уместен — между соседними услугами внутри группы, а не когда
+    // сцена целиком сменилась на «Знакомство»/«Кейсы» — там 600мс
+    // угасания достаточно, чтобы картинка успела "просвечивать" поверх
+    // уже начавшейся следующей секции
+    v.classList.toggle('is-out', !insideServices);
   });
 }
 
@@ -469,9 +489,13 @@ function warmServiceFrames(s) {
 
 // не гейтится prefersNoParallax/prefersReducedMotion — как и scrubA у
 // «Знакомства», это не автопроигрывание и не декоративный параллакс, а
-// прямое отражение прокрутки: кадр всегда 1:1 со скроллом пользователя
-function updateServiceScrub(scrollPos) {
-  const center = scrollPos + window.innerHeight / 2;
+// прямое отражение прокрутки: кадр всегда 1:1 со скроллом пользователя.
+// Читает window.scrollY напрямую, а не сглаженный smoothY (в отличие от
+// большинства других update-функций) — та же причина, что и у
+// insideServices в updateTheme: скрабу нужна точность к реальному
+// скроллу, а не эффект "картинка ещё доезжает" при быстрой прокрутке
+function updateServiceScrub() {
+  const center = window.scrollY + window.innerHeight / 2;
   serviceScrubEls.forEach((s) => {
     const settle = SERVICE_SCRUB_SETTLE[s.key] ?? 1;
     const raw = (center - s.top) / s.height;
@@ -767,7 +791,7 @@ function frameTick(now) {
   if (diff < 0.4) smoothY = targetY;
 
   scrubA.update(smoothY);
-  updateServiceScrub(smoothY);
+  updateServiceScrub();
   updateCasesParallax(smoothY);
   updateCasesTexture(smoothY);
   updateTheme(smoothY);
@@ -797,7 +821,7 @@ if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
   window.addEventListener('scroll', () => {
     smoothY = window.scrollY;
     scrubA.update(smoothY);
-    updateServiceScrub(smoothY);
+    updateServiceScrub();
     updateCasesParallax(smoothY);
     updateCasesTexture(smoothY);
     updateTheme(smoothY);
