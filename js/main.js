@@ -392,15 +392,47 @@ function updateTheme(scrollPos) {
   // канваса «Знакомства» (тот самый скриншот-баг с пустым верхом и
   // тёмным столом только внизу кадра)
   const insideServices = rawCenter >= servicesTop && rawScrollY < servicesBottom && rawScrollY >= heroPinBottom;
+  // последняя услуга — не мгновенный .is-out на самой границе группы, а
+  // ПОСТЕПЕННОЕ угасание в последние EXIT_FADE_PX перед ней, напрямую
+  // функцией rawScrollY (не CSS-transition — inline opacity считается
+  // каждый тик и не может отстать при быстрой прокрутке, та же техника,
+  // что и у дробного кросс-фейда кадров в updateServiceScrub). К этому
+  // моменту «Знакомство» под ней уже полностью прогрето и видно на всю
+  // непрозрачность (см. introRevealObserver, огромный rootMargin), так
+  // что угасание — настоящий кросс-фейд в готовую сцену, а не в пустоту.
+  // Раньше здесь тоже был мгновенный обрыв — картинка последней услуги
+  // просто "стояла" статично до самой границы, а следом сразу щёлкала в
+  // «Знакомство»; фидбек был в том, что этот статичный хвост (кадр уже
+  // не меняется, текста рядом тоже нет — см. .service-block-inner, он
+  // в потоке и уходит из вьюпорта раньше, чем фиксированная картинка)
+  // читался как пустой обрыв, а не как продуманный переход
+  const EXIT_FADE_PX = 480;
+  const lastServiceKey = serviceVisuals[serviceVisuals.length - 1]?.dataset.service;
   serviceVisuals.forEach((v) => {
-    v.classList.toggle('is-active', insideServices && v.dataset.service === currentServiceRaw);
+    const isCurrent = insideServices && v.dataset.service === currentServiceRaw;
+    v.classList.toggle('is-active', isCurrent);
     // .is-out — мгновенное (без transition) гашение строго при выходе
-    // из всей группы «Услуг»: плавный кросс-фейд (.6s) там, где он
-    // уместен — между соседними услугами внутри группы, а не когда
-    // сцена целиком сменилась на «Знакомство»/«Кейсы» — там 600мс
-    // угасания достаточно, чтобы картинка успела "просвечивать" поверх
-    // уже начавшейся следующей секции
+    // из всей группы «Услуг»: плавный кросс-фейд там, где он уместен —
+    // между соседними услугами внутри группы, а не когда сцена целиком
+    // сменилась на «Кейсы»/«Контакты» через любой другой путь (клавиша
+    // Home/End, якорная ссылка) — там угасание успевало бы "просвечивать"
+    // поверх уже начавшейся следующей секции. Для самой последней услуги
+    // этот путь и так уже закрыт постепенным угасанием выше — .is-out
+    // здесь просто гарантирует финальный 0, а не начинает его
     v.classList.toggle('is-out', !insideServices);
+    if (isCurrent && v.dataset.service === lastServiceKey) {
+      const distToEnd = servicesBottom - rawScrollY;
+      if (distToEnd < EXIT_FADE_PX) {
+        v.style.transition = 'none';
+        v.style.opacity = Math.max(0, Math.min(1, distToEnd / EXIT_FADE_PX));
+      } else {
+        v.style.transition = '';
+        v.style.opacity = '';
+      }
+    } else {
+      v.style.transition = '';
+      v.style.opacity = '';
+    }
   });
 }
 
@@ -533,6 +565,18 @@ if (serviceScrubEls[0]) warmServiceFrames(serviceScrubEls[0]);
 // показывался ровно один кадр на Math.round(progress) — с 40 кадрами на
 // текст-высоту блока это давало заметный покадровый "степ", особенно
 // там, где само движение в исходнике и без того тонкое (лупа SEO)
+//
+// У лупы этого всё равно оказалось мало: сам ролик — почти статичный,
+// едва заметный поворот камеры (см. README), так что даже кросс-фейд
+// между двумя почти одинаковыми кадрами не читается как "движение,
+// откликающееся на скролл" — глазу не за что зацепиться. SERVICE_SCRUB_ZOOM
+// добавляет отдельный, синтетический слой движения поверх реальных
+// кадров — плавный scale() на сам <img>, напрямую от progress (0..1 на
+// всё активное окно, без привязки к settle/кадрам). Это transform, а не
+// смена кадра — никаких дискретных шагов в принципе, честная
+// суб-пиксельная плавность на любой скорости скролла, ровно то, чего не
+// может дать никакая перетасовка 40 реальных кадров
+const SERVICE_SCRUB_ZOOM = { seo: 0.06 };
 function updateServiceScrub() {
   const center = window.scrollY + window.innerHeight / 2;
   serviceScrubEls.forEach((s) => {
@@ -562,6 +606,14 @@ function updateServiceScrub() {
     }
     // без transition — привязка к скроллу должна быть жёсткой, 1:1
     s.imgNext.style.opacity = frac;
+    const zoomAmt = SERVICE_SCRUB_ZOOM[s.key];
+    if (zoomAmt) {
+      const scaleRaw = (center - s.top) / s.height;
+      const scaleProgress = Math.max(0, Math.min(1, scaleRaw));
+      const t = `scale(${(1 + scaleProgress * zoomAmt).toFixed(4)})`;
+      s.img.style.transform = t;
+      s.imgNext.style.transform = t;
+    }
   });
 }
 
@@ -825,6 +877,15 @@ const stopSections = {
   sceneC: document.getElementById('sceneC'),
 };
 
+// у большинства опор рейл заранее (за полэкрана) подсвечивает следующую
+// секцию — уместно для простого индикатора чтения. Но sceneA
+// («Знакомство») сразу после «Услуг» — pinned-сцена, которая реально
+// закрывает экран только когда сам rawScrollY (не с запасом в полэкрана)
+// доскроллил до её верха: та же причина, что и у insideServices выше.
+// Если подсвечивать «Знакомство» на полэкрана раньше, рейл показывает
+// один раздел, пока во весь экран ещё стоит картинка последней услуги —
+// заметный разнобой сигналов на самом стыке
+const RAIL_LEAD_FRACTION = { sceneA: 0 };
 function updateProgressRail(scrollPos) {
   const docHeight = document.body.scrollHeight - window.innerHeight;
   const overall = docHeight > 0 ? scrollPos / docHeight : 0;
@@ -832,7 +893,8 @@ function updateProgressRail(scrollPos) {
 
   let activeKey = 'hero';
   Object.entries(stopSections).forEach(([key, el]) => {
-    if (scrollPos >= el.offsetTop - window.innerHeight * 0.5) activeKey = key;
+    const lead = RAIL_LEAD_FRACTION[key] ?? 0.5;
+    if (scrollPos >= el.offsetTop - window.innerHeight * lead) activeKey = key;
   });
   railStops.forEach(li => li.classList.toggle('is-active', li.dataset.stop === activeKey));
 }
