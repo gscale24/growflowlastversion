@@ -1,17 +1,26 @@
 /* ============ ТОЧКИ ПОДКЛЮЧЕНИЯ МЕДИА ============
-   Hero-видео + одна кадровая секвенция для «Знакомства». Остальные
-   секции идут обычным потоком без картинки, фон переключают [data-theme]. */
+   Hero-видео + живое видео «Знакомства» (смонтированный ролик из
+   нескольких планов со своими субтитрами — не один непрерывный кадр,
+   поэтому не покадровая секвенция, как раньше, а обычный <video>, см.
+   README). Остальные секции идут обычным потоком без картинки, фон
+   переключают [data-theme]. */
 const HERO_VIDEO_URL = "assets/hero.mp4";
-
-const SCENES_META = {
-  sceneA: { frames: 24, folder: 'assets/frames/sceneA' },
-};
-const TOTAL_FRAMES = SCENES_META.sceneA.frames;
+const INTRO_VIDEO_URL = "assets/intro.mp4";
 
 /* ==================================================================
-   ПРЕЛОАДЕР — агрегированный прогресс по кадрам «Знакомства»
+   ПРЕЛОАДЕР — раньше копился по кадрам «Знакомства» поштучно (см.
+   историю makeCoverScrubber) и оправданно ждал их все: без этого
+   первый проход покадрового скраббинга дёргался бы на недогруженных
+   кадрах. Сейчас там живое видео, которое грузится и буферизуется
+   само, без участия прелоадера (тот же принцип, что и у hero-видео,
+   которое прелоадер никогда не ждал) — специально устраивать этому
+   видео отдельный gate не нужно и рискованно: одно-единственное
+   событие (loadeddata) как обязательное условие — точка отказа, если
+   оно почему-то не придёт (ошибка кодека, сеть) страница держала бы
+   пользователя на заставке до общего таймаута. finishPreloader теперь
+   вызывается сразу, с минимальной задержкой ради самого бренд-момента
+   (полоса успевает мигнуть, а не исчезнуть до первого кадра отрисовки)
    ================================================================== */
-let loadedFramesTotal = 0;
 const preloaderEl = document.getElementById('preloader');
 const preloaderFill = document.getElementById('preloaderFill');
 const preloaderPct = document.getElementById('preloaderPct');
@@ -24,15 +33,10 @@ function finishPreloader() {
   preloaderEl.classList.add('is-done');
   document.getElementById('progressRail').classList.add('is-visible');
 }
-function bumpPreloader() {
-  loadedFramesTotal++;
-  const pct = Math.min(100, Math.round((loadedFramesTotal / TOTAL_FRAMES) * 100));
-  preloaderFill.style.width = pct + '%';
-  preloaderPct.textContent = pct + '%';
-  if (loadedFramesTotal >= TOTAL_FRAMES) finishPreloader();
-}
-// подстраховка: не держим прелоадер вечно, если что-то не догрузилось
-setTimeout(finishPreloader, 6000);
+setTimeout(finishPreloader, 400);
+// подстраховка на случай, если даже этот короткий таймер не выполнился
+// (вкладка в фоне, где таймеры троттлятся) — не держим прелоадер вечно
+setTimeout(finishPreloader, 4000);
 
 /* ==================================================================
    HERO ВИДЕО
@@ -52,132 +56,42 @@ setTimeout(finishPreloader, 6000);
 })();
 
 /* ==================================================================
-   ЗНАКОМСТВО — скролл-скраббинг кадров на весь экран (object-fit: cover)
+   ЗНАКОМСТВО — живое видео на весь экран (object-fit: cover через CSS,
+   не canvas). Раньше это был единственный на сайте покадровый
+   скролл-скраббинг (см. историю в README) — ролик сменился на
+   смонтированный из нескольких планов с собственными субтитрами, под
+   покадровую синхронизацию со скроллом такой уже не ложится: соседние
+   "кадры" в разных планах визуально никак не соседние. Видео просто
+   играет само по себе (тот же приём, что и в hero), без привязки к
+   scrollY вообще.
    ================================================================== */
-function makeCoverScrubber({ sectionEl, canvasEl, frameCount, frameFolder, frameDigits = 3, hardCuts = [], onProgress }) {
-  const ctx = canvasEl.getContext('2d');
-  const images = new Array(frameCount);
-  const hardCutSet = new Set(hardCuts);
-  let currentFrame = -1;
-  let lastBlendKey = null;
-  let sizedW = 0, sizedH = 0;
-
-  function frameSrc(i) {
-    const n = String(i + 1).padStart(frameDigits, '0');
-    return `${frameFolder}/f_${n}.jpg`;
-  }
-  for (let i = 0; i < frameCount; i++) {
-    const img = new Image();
-    img.src = frameSrc(i);
-    img.onload = () => { bumpPreloader(); if (i === 0) drawFrame(0); };
-    img.onerror = () => { bumpPreloader(); };
-    images[i] = img;
-  }
-
-  // канвас ресайзится под реальный размер вьюпорта (а не под кадр) —
-  // рисуем кадр с обрезкой по типу object-fit: cover, без полос по бокам
-  function ensureCanvasSize() {
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    const w = Math.round(canvasEl.clientWidth * dpr);
-    const h = Math.round(canvasEl.clientHeight * dpr);
-    if (w !== sizedW || h !== sizedH) {
-      sizedW = w; sizedH = h;
-      canvasEl.width = w; canvasEl.height = h;
-    }
-  }
-  function drawCover(img, alpha) {
-    const scale = Math.max(sizedW / img.naturalWidth, sizedH / img.naturalHeight);
-    const dw = img.naturalWidth * scale, dh = img.naturalHeight * scale;
-    ctx.globalAlpha = alpha;
-    ctx.drawImage(img, (sizedW - dw) / 2, (sizedH - dh) / 2, dw, dh);
-  }
-
-  function drawFrame(index) {
-    index = Math.max(0, Math.min(frameCount - 1, Math.round(index)));
-    const img = images[index];
-    if (!img || !img.complete || img.naturalWidth === 0) return;
-    ensureCanvasSize();
-    currentFrame = index; lastBlendKey = null;
-    ctx.clearRect(0, 0, sizedW, sizedH);
-    drawCover(img, 1);
-    ctx.globalAlpha = 1;
-  }
-
-  function drawFrameBlended(floatIndex) {
-    floatIndex = Math.max(0, Math.min(frameCount - 1, floatIndex));
-    const lo = Math.floor(floatIndex);
-    const hi = Math.min(frameCount - 1, lo + 1);
-    const frac = floatIndex - lo;
-    const key = lo + '_' + frac.toFixed(3);
-    if (key === lastBlendKey) return;
-    const imgLo = images[lo];
-    if (!imgLo || !imgLo.complete || imgLo.naturalWidth === 0) return;
-    ensureCanvasSize();
-    lastBlendKey = key; currentFrame = lo;
-    ctx.clearRect(0, 0, sizedW, sizedH);
-    if (hardCutSet.has(lo) && hi !== lo) {
-      // монтажная склейка (в кадрах вырезан кусок ролика) — соседние
-      // кадры тут визуально не соседние, обычный кроссфейд даёт двойную
-      // экспозицию (руки видно сразу в двух местах), поэтому режем жёстко
-      // по середине, без промежуточного альфа-блендинга
-      const img = frac < 0.5 ? imgLo : images[hi];
-      if (img && img.complete && img.naturalWidth > 0) drawCover(img, 1);
-    } else {
-      drawCover(imgLo, 1);
-      if (frac > 0.008 && hi !== lo) {
-        const imgHi = images[hi];
-        if (imgHi && imgHi.complete && imgHi.naturalWidth > 0) drawCover(imgHi, frac);
-      }
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  function getProgress(scrollPos) {
-    const total = sectionEl.offsetHeight - window.innerHeight;
-    if (total <= 0) return 0;
-    return Math.max(0, Math.min(1, (scrollPos - sectionEl.offsetTop) / total));
-  }
-  function update(scrollPos) {
-    const p = getProgress(scrollPos);
-    const floatIndex = p * (frameCount - 1);
-    drawFrameBlended(floatIndex);
-    if (onProgress) onProgress(p);
-    return p;
-  }
-  window.addEventListener('resize', () => { sizedW = 0; sizedH = 0; drawFrame(currentFrame); });
-  return { update, drawFrame };
-}
-
-const sceneAEl = document.getElementById('sceneA');
+const introVideoEl = document.getElementById('introVideo');
 const introCopy = document.getElementById('introCopy');
-const scrubA = makeCoverScrubber({
-  sectionEl: sceneAEl,
-  canvasEl: document.getElementById('canvasA'),
-  frameCount: SCENES_META.sceneA.frames,
-  frameFolder: SCENES_META.sceneA.folder,
-  // один непрерывный дубль (сел → руки на клавиатуру), склеек нет
-  hardCuts: [],
-  onProgress(p) {
-    // текст появляется, когда руки лягут на клавиатуру (кадр 14 из 24 —
-    // p ≈ 13/23), и остаётся на экране до конца пина
-    introCopy.classList.toggle('is-visible', p >= 0.56);
-  },
-});
+(function initIntroVideo() {
+  if (!introVideoEl || !INTRO_VIDEO_URL) return;
+  introVideoEl.src = INTRO_VIDEO_URL;
+})();
 
 // стык предыдущей секции → «Знакомство» (сейчас это Услуги, но код не
-// завязан на конкретного соседа): без этого канвас с первым же пикселем
+// завязан на конкретного соседа): без этого видео с первым же пикселем
 // в вьюпорте уже стоит в полной яркости — это читается как щелчок, а не
-// переход. rootMargin с большим отступом
-// снизу срабатывает, пока секция ещё на ~40% высоты экрана ниже
-// вьюпорта — за время transition (см. .intro-sticky canvas в
-// css/style.css) канвас успевает выйти на полную непрозрачность
-// раньше, чем пользователь долистает до самого пина, поэтому сам
-// момент прилипания уже ничем не выделяется на глаз. Разовый триггер,
-// как и у остальных .reveal-block на странице — дальше не трогаем.
+// переход. rootMargin с большим отступом снизу срабатывает, пока секция
+// ещё на ~40% высоты экрана ниже вьюпорта — за время transition (см.
+// .intro-sticky .intro-video в css/style.css) видео успевает выйти на
+// полную непрозрачность раньше, чем пользователь долистает до самого
+// пина, поэтому сам момент прилипания уже ничем не выделяется на глаз.
+// Разовый триггер, как и у остальных .reveal-block на странице — дальше
+// не трогаем. Текст (introCopy) и запуск воспроизведения видео теперь
+// висят на этом же триггере — раньше текст ждал, пока скролл-прогресс
+// покадрового скраббинга дойдёт до конкретного кадра (руки на
+// клавиатуре), сейчас прогресса такого рода нет: видео просто играет на
+// своей внутренней раскадровке, не на позиции скролла
 const introRevealObserver = new IntersectionObserver((entries) => {
   entries.forEach((entry) => {
     if (entry.isIntersecting) {
       entry.target.classList.add('is-visible');
+      introVideoEl.play().catch(() => {});
+      introCopy.classList.add('is-visible');
       introRevealObserver.unobserve(entry.target);
     }
   });
@@ -574,9 +488,9 @@ function warmServiceFrames(s) {
 // её и так видно почти сразу после hero, ждать пересечения смысла нет
 if (serviceScrubEls[0]) warmServiceFrames(serviceScrubEls[0]);
 
-// не гейтится prefersNoParallax/prefersReducedMotion — как и scrubA у
-// «Знакомства», это не автопроигрывание и не декоративный параллакс, а
-// прямое отражение прокрутки: кадр всегда 1:1 со скроллом пользователя.
+// не гейтится prefersNoParallax/prefersReducedMotion — не автопроигрывание
+// и не декоративный параллакс, а прямое отражение прокрутки: кадр всегда
+// 1:1 со скроллом пользователя.
 // Читает window.scrollY напрямую, а не сглаженный smoothY (в отличие от
 // большинства других update-функций) — та же причина, что и у
 // insideServices в updateTheme: скрабу нужна точность к реальному
@@ -946,7 +860,6 @@ function frameTick(now) {
   const diff = Math.abs(targetY - smoothY);
   if (diff < 0.4) smoothY = targetY;
 
-  scrubA.update(smoothY);
   updateServiceScrub();
   updateCasesParallax(smoothY);
   updateCasesTexture(smoothY);
@@ -976,7 +889,6 @@ if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
   window.removeEventListener('scroll', kickScroll);
   window.addEventListener('scroll', () => {
     smoothY = window.scrollY;
-    scrubA.update(smoothY);
     updateServiceScrub();
     updateCasesParallax(smoothY);
     updateCasesTexture(smoothY);

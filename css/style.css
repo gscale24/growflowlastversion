@@ -334,26 +334,33 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
 .reveal-block{opacity:0;transform:translateY(46px);transition:opacity 1s var(--ease), transform 1s var(--ease);}
 .reveal-block.is-visible{opacity:1;transform:translateY(0);}
 
-/* ---- Знакомство: скролл-скраббинг кадров на весь экран ----
-   Единственная оставшаяся pinned-сцена на сайте (см. makeCoverScrubber
-   в js/main.js) — кадр рисуется в канвас с обрезкой по типу object-fit:
-   cover, без чёрных полос и без обрезанной композиции. Синий акцент —
+/* ---- Знакомство: живое видео на весь экран ----
+   Раньше здесь был единственный на сайте pinned-скраббинг покадровых
+   кадров (makeCoverScrubber) — но текущий ролик смонтирован из
+   нескольких разных планов со своими субтитрами, а не один непрерывный
+   кадр, и под покадровую синхронизацию со скроллом не ложится. Вместо
+   этого — обычное автовоспроизводящееся видео, тот же приём, что и в
+   hero (.hero-video): played на своей внутренней раскадровке, а не по
+   позиции скролла; секция всё ещё sticky на 100vh, чтобы под ней
+   оставался читаемый запас скролла для текста, но без прежних 320vh
+   (это имело смысл только пока прогресс скролла напрямую был кадром
+   ролика — сейчас это просто спейсер длины чтения). Синий акцент —
    локальный оверрайд --accent, подхватывает цвет света в самом кадре. */
 #sceneA{--accent:#5aa3e8;}
-.intro-scene{position:relative;height:320vh;}
+.intro-scene{position:relative;height:180vh;}
 .intro-sticky{position:sticky;top:0;height:100vh;overflow:hidden;background:var(--bg);}
-/* видео не "впечатывается" в кадр разом при стыке с hero — канвас и
+/* видео не "впечатывается" в кадр разом при стыке с hero — видео и
    тонировка вместе набирают непрозрачность, когда секция подходит
    к вьюпорту (.is-visible ставится один раз через IntersectionObserver
    в js/main.js, см. introRevealObserver, с запасом по rootMargin —
    переход успевает завершиться до того, как секция реально встанет
    в кадр целиком) */
-.intro-sticky canvas{
-  position:absolute;inset:0;width:100%;height:100%;display:block;
+.intro-sticky .intro-video{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;display:block;
   opacity:0;transform:scale(1.035);
   transition:opacity 1s var(--ease), transform 1.1s var(--ease);
 }
-.intro-sticky.is-visible canvas{opacity:1;transform:scale(1);}
+.intro-sticky.is-visible .intro-video{opacity:1;transform:scale(1);}
 .intro-tint{
   position:absolute;inset:0;pointer-events:none;
   opacity:0;transition:opacity 1s var(--ease);
