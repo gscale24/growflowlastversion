@@ -7,6 +7,15 @@
 const HERO_VIDEO_URL = "assets/hero.mp4";
 const INTRO_VIDEO_URL = "assets/intro.mp4";
 
+// поднято сюда, к самому началу файла — раньше жило только рядом с
+// параллаксом «Кейсов», но параллакс «Знакомства» (ниже) нужен куда
+// раньше по коду и на этих же трёх флагах: тач-устройства (pointer:
+// coarse) и prefers-reduced-motion гасят декоративный параллакс везде
+// на странице одинаково, а не по месту использования
+const prefersCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const prefersNoParallax = prefersCoarsePointer || prefersReducedMotion;
+
 /* ==================================================================
    ПРЕЛОАДЕР — раньше копился по кадрам «Знакомства» поштучно (см.
    историю makeCoverScrubber) и оправданно ждал их все: без этого
@@ -61,9 +70,10 @@ setTimeout(finishPreloader, 4000);
    скролл-скраббинг (см. историю в README) — ролик сменился на
    смонтированный из нескольких планов с собственными субтитрами, под
    покадровую синхронизацию со скроллом такой уже не ложится: соседние
-   "кадры" в разных планах визуально никак не соседние. Видео просто
-   играет само по себе (тот же приём, что и в hero), без привязки к
-   scrollY вообще.
+   "кадры" в разных планах визуально никак не соседние. Само видео
+   играет по своей внутренней раскадровке, не по позиции скролла (тот
+   же приём, что и в hero) — но поверх этого ещё лёгкий параллакс самого
+   кадра относительно скролла, см. updateIntroParallax ниже.
    ================================================================== */
 const introVideoEl = document.getElementById('introVideo');
 const introCopy = document.getElementById('introCopy');
@@ -97,6 +107,38 @@ const introRevealObserver = new IntersectionObserver((entries) => {
   });
 }, { threshold: 0, rootMargin: '0px 0px 40% 0px' });
 introRevealObserver.observe(document.querySelector('.intro-sticky'));
+
+// параллакс видео «Знакомства» — та же идея, что и у карточек «Кейсов»
+// (updateCasesParallax ниже): видео едет чуть медленнее/иначе, чем сам
+// скролл, создавая ощущение глубины (текст и тонировка — в обычном
+// потоке страницы, никуда не сдвигаются). Секция pinned ровно на
+// intro-scene.offsetHeight - 100vh пикселей скролла (см. .intro-scene в
+// css/style.css) — прогресс считается от этого же диапазона: 0 в
+// момент прилипания, 1 перед самым отлипанием. .intro-video специально
+// на 12% выше/шире своей обёртки (см. css/style.css) — translateY в
+// пределах ±INTRO_PARALLAX_PX/2 никогда не оголяет край кадра.
+// Не гейтится на loadedmetadata/что-либо ещё — это transform самого
+// <video>, воспроизведение и позиционирование кадра друг другу не мешают
+const introSceneEl = document.getElementById('sceneA');
+const INTRO_PARALLAX_PX = 70;
+let introSceneTop = 0, introSceneTotal = 0;
+function measureIntroScene() {
+  if (!introSceneEl) return;
+  const rect = introSceneEl.getBoundingClientRect();
+  introSceneTop = rect.top + window.scrollY;
+  introSceneTotal = introSceneEl.offsetHeight - window.innerHeight;
+}
+function updateIntroParallax(scrollPos) {
+  if (prefersNoParallax || !introVideoEl || introSceneTotal <= 0) return;
+  const progress = Math.max(0, Math.min(1, (scrollPos - introSceneTop) / introSceneTotal));
+  const offset = (progress - 0.5) * INTRO_PARALLAX_PX;
+  introVideoEl.style.transform = `translateY(${offset.toFixed(1)}px)`;
+}
+if (!prefersNoParallax) {
+  measureIntroScene();
+  window.addEventListener('resize', measureIntroScene);
+  window.addEventListener('load', measureIntroScene);
+}
 
 /* ==================================================================
    ФОН СЕКЦИЙ — вся страница как единое полотно с непрерывным градиентом
@@ -731,9 +773,8 @@ contactForm.addEventListener('submit', (e) => {
 // делать нечего, наклон на full-width строке читался бы как визуальный
 // баг, а не как приём. prefers-reduced-motion отдельно — desktop без
 // анимации всё ещё держит статичный наклон, просто без покачивания.
-const prefersCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
-const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const prefersNoParallax = prefersCoarsePointer || prefersReducedMotion;
+// (prefersCoarsePointer/prefersReducedMotion/prefersNoParallax — в самом
+// начале файла, общие на весь скролл-параллакс страницы)
 // лёгкий постоянный наклон у каждой карточки (как у разбросанных на столе
 // фотографий) — вместе с параллаксом и тройной тенью создаёт объём вместо
 // плоской подложки; складывается в один transform с параллаксом ниже, а
@@ -861,6 +902,7 @@ function frameTick(now) {
   if (diff < 0.4) smoothY = targetY;
 
   updateServiceScrub();
+  updateIntroParallax(smoothY);
   updateCasesParallax(smoothY);
   updateCasesTexture(smoothY);
   updateTheme(smoothY);
@@ -890,6 +932,7 @@ if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
   window.addEventListener('scroll', () => {
     smoothY = window.scrollY;
     updateServiceScrub();
+    updateIntroParallax(smoothY);
     updateCasesParallax(smoothY);
     updateCasesTexture(smoothY);
     updateTheme(smoothY);
