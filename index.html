@@ -108,9 +108,12 @@
 </section>
 </div>
 
-<!-- ================= УСЛУГИ — обычный поток, карточки идут одна за другой,
-     фон чередует светлую/тёмную тему (разрыв палитры, как на
-     kookie-kollective.com), тонкая вкладка-рейл прилипает сбоку ================= -->
+<!-- ================= УСЛУГИ — карточки складываются стопкой: каждая
+     .service-block — position:sticky на весь экран внутри своего
+     .service-pin (150vh), тот же приём, что и у .hero-pin/.hero — при
+     скролле следующая карточка выезжает и накрывает предыдущую целиком,
+     та остаётся неподвижной под ней, пока сама не отлипнет и не
+     уступит место следующей. Тонкая вкладка-рейл прилипает сбоку ================= -->
 <section class="services-group" id="sceneB">
 
   <div class="services-groupbar services-groupbar--top">
@@ -128,6 +131,7 @@
 
     <div class="services-blocks">
 
+      <div class="service-pin">
       <article class="service-block" id="service-smm" data-service="smm" data-theme="services">
         <div class="service-block-inner">
           <span class="service-num">01</span>
@@ -149,7 +153,9 @@
           <img class="service-visual-frame is-next" data-frames="smm" src="assets/frames/smm/f_001.jpg" alt="">
         </div>
       </article>
+      </div>
 
+      <div class="service-pin">
       <article class="service-block" id="service-performance" data-service="performance" data-theme="services">
         <div class="service-block-inner">
           <span class="service-num">02</span>
@@ -171,7 +177,9 @@
           <img class="service-visual-frame is-next" data-frames="target" src="assets/frames/target/f_001.jpg" alt="">
         </div>
       </article>
+      </div>
 
+      <div class="service-pin">
       <article class="service-block" id="service-seo" data-service="seo" data-theme="services">
         <div class="service-block-inner">
           <span class="service-num">03</span>
@@ -193,7 +201,9 @@
           <img class="service-visual-frame is-next" data-frames="seo" src="assets/frames/seo/f_001.jpg" alt="">
         </div>
       </article>
+      </div>
 
+      <div class="service-pin">
       <article class="service-block" id="service-production" data-service="production" data-theme="services">
         <div class="service-block-inner">
           <span class="service-num">04</span>
@@ -215,6 +225,7 @@
           <img class="service-visual-frame is-next" data-frames="production" src="assets/frames/production/f_001.jpg" alt="">
         </div>
       </article>
+      </div>
 
     </div>
   </div>
@@ -223,15 +234,10 @@
     <span class="services-hint">Скролль дальше</span>
   </div>
 
-  <!-- мягкая белая дымка на стыках между самими карточками услуг (SMM↔
-       Таргет↔SEO↔Продакшн) — лёгкая добавка поверх кросс-фейда картинок
-       (.service-visual.is-active), не отдельный «нырок», см.
-       updateServicesCardVeil в js/main.js -->
-  <div class="services-card-veil" aria-hidden="true"></div>
 
   <!-- чёрная дымка на стыке с «Знакомством» — не просто кросс-фейд
        картинки в картинку, а полноценное «нырнуло в чёрное и вынырнуло»,
-       см. EXIT_FADE_PX/veilEl в js/main.js -->
+       см. servicesExitVeilEl в js/main.js -->
   <div class="services-exit-veil" aria-hidden="true"></div>
 
 </section>

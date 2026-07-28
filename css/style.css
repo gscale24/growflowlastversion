@@ -444,9 +444,17 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
    собственный (растянутый или, наоборот, схлопнутый до 0) бокс — тогда
    рейл "отлипает" не там, где нужно, и остаётся виден поверх соседней
    секции. Со start бокс — по высоте контента, обычный sticky в рамках
-   всей колонки. */
+   всей колонки.
+   grid-row:1 — рейл и .services-blocks (ниже) намеренно ЗАНИМАЮТ ОДНУ И
+   ТУ ЖЕ ячейку грида (.services-blocks — grid-column:1/-1, целиком через
+   обе колонки, включая эту): каждая складывающаяся стопкой карточка
+   должна быть полноширинной (full-bleed картинка до самых краёв, как у
+   hero), а не обрезанной колонкой контента. Рейл при этом всё равно
+   виден — z-index выше, чем у карточек (z-index:auto), рисуется поверх
+   независимо от DOM-порядка (рейл раньше карточек в разметке, без
+   z-index проиграл бы им по обычному правилу "позже в DOM — выше") */
 .services-tabs-rail{
-  grid-column:1;align-self:start;position:sticky;top:120px;
+  grid-column:1;grid-row:1;z-index:6;align-self:start;position:sticky;top:120px;
   display:flex;flex-direction:column;gap:clamp(28px,5vh,56px);
   color:var(--fg);mix-blend-mode:difference;
 }
@@ -462,26 +470,40 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
 .services-tab.is-active::before{content:'[';margin-bottom:4px;}
 .services-tab.is-active::after{content:']';margin-top:4px;}
 
-.services-blocks{grid-column:2;}
+.services-blocks{grid-column:1/-1;grid-row:1;}
 
-/* .service-block больше не несёт своей opacity/transform — теперь это
-   просто высокая (150vh, а не 86vh) размерная "дорожка", по которой
-   едет чтение: чем она выше, тем дольше конкретная услуга остаётся
-   "текущей" (см. currentService в updateTheme, js/main.js) и тем больше
-   времени у .service-visual (fixed на весь экран, см. ниже) на свою
-   покадровую анимацию, пока читатель не долистал до следующей. Ни
-   opacity:0, ни тем более transform на самом .service-block больше не
-   бывает — оба ставят под удар .service-visual: opacity разночтения
-   схлопнулись бы (эффект композитный по дереву), а transform у любого
-   предка сломал бы position:fixed (создал бы для него новый containing
-   block вместо реального вьюпорта). Вход текста в кадр — теперь на
-   .service-block-inner (ниже), у самого .service-block — только
-   размер и разделитель. */
+/* Карточки-услуги складываются стопкой — тот же приём, что у
+   .hero-pin/.hero (см. выше): .service-pin — распорка (150vh, задаёт,
+   насколько долго конкретная услуга держится перед тем, как её накроет
+   следующая), .service-block внутри — sticky на весь экран. Пока
+   читатель скроллит внутри одного .service-pin, его карточка стоит
+   неподвижно; как только начинается СЛЕДУЮЩИЙ .service-pin, следующая
+   карточка (она же ниже по DOM, значит и в стеке — см. ниже) выезжает
+   снизу и постепенно закрывает предыдущую целиком — обычный документный
+   поток плюс sticky, без единой opacity/transform в JS. Ни z-index, ни
+   тем более opacity/transition тут не нужно: у позиционированных
+   потомков без z-index (или с одинаковым) внутри одного контекста
+   порядок отрисовки — это просто DOM-порядок, более поздний поверх
+   более раннего (тот же принцип, по которому .services-group рисуется
+   поверх sticky .hero). box-shadow снизу — та же лёгкая тень, что и у
+   .services-group относительно hero: продаёт ощущение, что карточка
+   физически лежит НАД предыдущей, а не просто сменяет её.
+
+   padding-left компенсирует то, что .service-block теперь полноширинный
+   (.services-blocks — grid-column:1/-1, см. выше, специально ради
+   full-bleed картинки от края до края), а не колонка №2 грида — без
+   компенсации текст (.service-block-inner, flex-child) начинался бы
+   из-под самого рейла слева. Картинку (.service-visual, absolute
+   inset:0 внутри) это не сжимает: у абсолютно спозиционированных
+   потомков containing block — это padding edge предка, а не content
+   edge, так что она всё равно бежит от истинного левого края. */
+.service-pin{position:relative;height:150vh;}
 .service-block{
-  position:relative;min-height:150vh;display:flex;align-items:center;
-  border-bottom:1px solid var(--line);
+  position:sticky;top:0;height:100vh;overflow:hidden;
+  display:flex;align-items:center;
+  padding-left:calc(min(140px,14vw) + 4%);
+  box-shadow:0 -40px 60px -20px rgba(0,0,0,0.35);
 }
-.service-block:last-child{border-bottom:none;}
 /* padding+отрицательный margin той же величины — панель (фон+блюр)
    растёт наружу от контента, а сама коробка снаружи занимает то же
    место, что и раньше (без padding), так что вокруг ничего не сдвигается */
@@ -549,17 +571,15 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
    Раньше это была маленькая обведённая "фотография" (border+box-shadow),
    которая ехала параллаксом рядом с текстом — на предметной анимации
    рамка+тень читались дёшево, как декоративный виджет, а не как часть
-   контента. Теперь .service-visual — не часть строчного потока рядом с
-   текстом, а position:fixed во весь экран целиком (100vw×100vh), БЕЗ
-   обводки/тени/границы: изображение — это и есть экран, как у
-   hero-видео. Видимость не завязана на пересечение вьюпорта (there's
-   ровно 4 таких слоя на всю страницу, у каждого — свой data-service), а
-   на тот же currentService, что уже вычисляется в updateTheme
-   (js/main.js) для подсветки активной вкладки — класс .is-active
-   включается ровно на том, чья услуга сейчас "текущая", и плавно
-   кросс-фейдится в следующую, когда читатель долистал дальше. Ни у
-   .service-block, ни у любого его предка нет transform — иначе fixed
-   привязался бы не к вьюпорту, а к этому предку.
+   контента. .service-visual заполняет собой весь .service-block (теперь
+   sticky на весь экран, см. выше) — position:absolute;inset:0, а не
+   fixed: карточка сама уже зафиксирована на экране, пока активна,
+   отдельный fixed-слой для картинки не нужен. Видимость картинки
+   больше не переключается через JS (не было ни одного is-active/
+   is-out) — она просто есть, всегда на 100% непрозрачности, а
+   "появление"/"исчезновение" конкретной услуги — это и есть сам
+   sticky-стек: следующая карточка целиком (текст+картинка) физически
+   наезжает поверх текущей, когда доходит её черёд.
 
    Картинка на весь экран — значит текст (слева, .service-block-inner,
    z-index:2) сидит прямо поверх неё, а не рядом на чистом фоне. Вместо
@@ -570,39 +590,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
    обрывается жёсткой границей плашки. Один и тот же --bg и для фона
    страницы, и для затемнения — поэтому это по-прежнему одно полотно,
    а не текст на отдельной панели поверх фото. */
-/* Раньше здесь была последовательная смена с честной паузой между
-   уходом старой картинки и приходом новой ("перелистывание") — но по
-   фидбеку это читалось не как единая экосистема, а как заметное
-   переключение с пустотой посередине. Вернули одновременный кросс-
-   фейд: exit и enter — одна и та же длительность, без задержки, оба
-   запускаются в один момент (currentServiceRaw меняется атомарно для
-   всех четырёх сразу), поэтому старая и новая картинка всегда
-   перекрываются в кадре — экран никогда не бывает пустым, одно
-   плавно перетекает в другое. translateY общий на оба направления
-   (уходит вверх при выходе, "падает" сверху при входе, в том числе
-   самый первый раз для SMM после hero) — при одновременном перекрытии
-   это читается как общий дрейф сцены, а не как две независимые
-   анимации */
-.service-visual{
-  position:fixed;inset:0;overflow:hidden;
-  z-index:1;opacity:0;pointer-events:none;
-  transform:translateY(-48px);
-  transition:opacity .7s var(--ease), transform .7s var(--ease);
-}
-.service-visual.is-active{
-  opacity:1;transform:translateY(0);
-  transition:opacity .7s var(--ease), transform .7s var(--ease);
-}
-/* мгновенное гашение строго при выходе из всей группы «Услуг» — кросс-
-   фейд выше уместен между соседними услугами внутри группы (обе —
-   часть одной и той же сцены), но не когда сцена целиком сменилась на
-   «Знакомство»: там угасание успевало "просвечивать" поверх уже
-   начавшейся следующей секции. Само место, где insideServices
-   переключается, теперь выверено так (см. rawScrollY-граница в
-   updateTheme, js/main.js), что к этому моменту следующая секция уже
-   на 100% закрывает экран сама — мгновенности можно не бояться, под
-   ней больше не остаётся пустоты */
-.service-visual.is-out{transition:none!important;opacity:0!important;transform:none!important;}
+.service-visual{position:absolute;inset:0;overflow:hidden;z-index:0;}
 .service-visual-frame{width:100%;height:100%;object-fit:cover;object-position:62% center;display:block;will-change:opacity,transform;}
 /* у лупы (SEO) распознаваемая часть — само стекло — снята левее центра
    кадра; общий 62%-сдвиг вправо (нужен остальным трём, чтобы предмет не
@@ -631,28 +619,19 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
      цветом (у SEO предмет как раз лежит в этой зоне и терялся под ней) */
   background:linear-gradient(to right, var(--bg) 0%, transparent 22%);
 }
-/* мягкая белая дымка МЕЖДУ карточками услуг (SMM↔Таргет↔SEO↔Продакшн) —
-   см. updateServicesCardVeil в js/main.js. В отличие от чёрной дымки
-   ниже (полноценный «нырок» на выходе из всей группы) — это лёгкая
-   добавка поверх уже идущего кросс-фейда картинок
-   (.service-visual.is-active): одиночный симметричный пик ровно на
-   границе каждой пары карточек, узкий и невысокий (CARD_VEIL_PEAK),
-   чтобы смягчить сам момент склейки, а не изображать полноценное
-   затемнение сцены */
-.services-card-veil{
-  position:fixed;inset:0;z-index:2;
-  background:#fff;opacity:0;pointer-events:none;
-  will-change:opacity;
-}
-
 /* «нырок в чёрное» на стыке последней услуги и «Знакомства» — см.
-   veilEl/EXIT_FADE_PX в js/main.js. Непрозрачность считается прямо от
-   rawScrollY (та же техника, что и у графика затухания самой картинки
-   выше) как треугольная волна с пиком ровно на границе группы: 0 на
-   подходе → почти сплошной чёрный ровно в момент передачи → снова 0,
-   когда «Знакомство» уже полностью само на экране. Не кросс-фейд одной
-   картинки в другую (это уже даёт .service-visual/is-active сам по
-   себе), а самостоятельный слой поверх обеих — классический приём
+   servicesExitVeilEl в js/main.js. Непрозрачность считается прямо от
+   rawScrollY как несимметричная огибающая с плато (RISE_START/PEAK_START/
+   PEAK_END/FALL_END) с пиком на границе группы: 0 на подходе → почти
+   сплошной чёрный вокруг момента передачи → снова 0, когда «Знакомство»
+   уже полностью само на экране. Нужен не из-за
+   самих карточек услуг (они и так складываются стопкой без единого
+   fixed-слоя, см. .service-block выше) — а из-за стыка самих секций:
+   `.services-group` стоит с явным z-index:2 (нужен, чтобы гарантированно
+   рисоваться поверх sticky hero), а следующая за ней «Знакомство»
+   (`.intro-scene`) — обычный position:relative без z-index, так что по
+   умолчанию она красилась бы ПОД «Услугами» независимо от скролла.
+   Дымка — самостоятельный слой поверх обеих секций, классический приём
    монтажа "cross-dissolve through black", а не жёсткая склейка кадров */
 .services-exit-veil{
   position:fixed;inset:0;z-index:2;
@@ -668,51 +647,37 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
   .services-groupbar{padding-top:16px;padding-bottom:16px;}
   .services-grid{grid-template-columns:1fr;}
   .services-tabs-rail{display:none;}
-  .service-block{flex-direction:column;align-items:flex-start;gap:32px;min-height:auto;padding:9vh 0;}
-  /* на мобильном fixed-на-весь-экран и кросс-фейд по currentService не
-     нужны — некуда и незачем прятать соседние картинки за экраном
-     высотой в один вьюпорт: возвращаем каждую в обычный поток внутри
-     своей карточки, простым баннером над текстом. Текст здесь не
-     наслаивается на картинку (обычный поток сверху вниз), так что
-     градиент-подложка (::after) тоже не нужна — это только десктопный
-     приём для full-bleed текста поверх картинки. Появление баннера
-     раньше было `opacity:1!important` (всегда видим, без анимации) —
-     из-за этого картинка просто выскакивала в кадре без какого-либо
-     влёта, хотя у самого текста рядом такой влёт есть (см.
-     .service-block-inner выше). Теперь баннер влетает тем же приёмом и
-     от того же триггера, что и текст: сверху при скролле вниз, снизу —
-     при скролле вверх (data-dir, serviceRevealObserver). is-active/
-     is-out (desktop-логика currentService/insideServices — см. js/
-     main.js) на мобильном баннере не просто не нужны, а вредны: они
-     считаются от rawCenter (центр вьюпорта) и heroPinBottom, а
-     is-visible — от куда более раннего порога пересечения (см.
-     serviceRevealObserver, threshold 0.15). На мобильных блоки заметно
-     короче десктопных (min-height:auto вместо 150vh), поэтому этот
-     разрыв easily перекрывает целый блок целиком: is-visible уже true
-     (блок на экране), а insideServices ещё false (центр вьюпорта до
-     него не дотянулся) — .is-out в этот момент гасит картинку
-     `!important`, перебивая всё остальное. Раньше это маскировал сам
-     `opacity:1!important` (перебивал is-out встречным !important той
-     же силы, специфичность решала в его пользу). Здесь та же техника,
-     только специфично и точечно: .service-visual целиком выведен из
-     под is-active/is-out через !important на всех трёх свойствах,
-     видимость и transform подчинены исключительно is-visible/data-dir */
+  /* складывающийся sticky-стек — десктопный приём: карточки достаточно
+     высокие (100vh), чтобы наезд одной на другую читался как физическое
+     движение. На мобильном такой sticky-заход только мешал бы обычному
+     чтению одним пальцем — возвращаем обе части в нормальный поток:
+     .service-pin больше не спейсер (height:auto), .service-block больше
+     не прилипает (position:static, height:auto), картинка — обычный
+     баннер над текстом, а не full-bleed подложка под ним */
+  .service-pin{height:auto;}
+  .service-block{
+    position:static;height:auto;overflow:visible;box-shadow:none;
+    flex-direction:column;align-items:flex-start;gap:32px;padding:9vh 0;
+  }
+  /* баннер влетает тем же приёмом и от того же триггера, что и текст:
+     сверху при скролле вниз, снизу — при скролле вверх (data-dir,
+     serviceRevealObserver) — раньше тут была отдельная is-active/is-out
+     логика для desktop-варианта картинки (см. историю в README), на
+     простом баннере в потоке она была не нужна и мешала: видимость и
+     transform подчинены исключительно is-visible/data-dir */
   .service-visual{
     position:relative;width:100%;height:56vw;max-height:340px;order:-1;
-    opacity:0!important;transform:translateY(-40px)!important;pointer-events:none;
-    transition:opacity .7s var(--ease), transform .7s var(--ease)!important;
+    opacity:0;transform:translateY(-40px);pointer-events:none;
+    transition:opacity .7s var(--ease), transform .7s var(--ease);
   }
-  .service-block[data-dir="up"] .service-visual{transform:translateY(40px)!important;}
-  .service-block.is-visible .service-visual{opacity:1!important;transform:translateY(0)!important;}
+  .service-block[data-dir="up"] .service-visual{transform:translateY(40px);}
+  .service-block.is-visible .service-visual{opacity:1;transform:translateY(0);}
   .service-visual::after{content:none;}
-  /* на мобильном нет единого fixed-слоя, который эта дымка перекрывала
-     бы собой на стыке — .service-visual тут обычный баннер в потоке, и
-     чёрный fixed-слой во весь экран поверх него смотрелся бы как
-     самостоятельный, ничем не объяснённый глюк, а не как переход */
+  /* на мобильном нет полноэкранного fixed/sticky слоя услуг, который эта
+     дымка перекрывала бы собой на стыке — чёрный fixed-слой во весь
+     экран поверх обычной страницы смотрелся бы как самостоятельный,
+     ничем не объяснённый глюк, а не как переход (см. историю в README) */
   .services-exit-veil{display:none;}
-  /* та же причина — белая дымка между карточками маскирует кросс-фейд
-     полноэкранных .service-visual, которого на мобильном просто нет */
-  .services-card-veil{display:none;}
 }
 
 /* ---- Кейсы ---- */
