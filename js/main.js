@@ -379,9 +379,33 @@ function updateTheme(scrollPos) {
   const EXIT_FADE_PX = 220;
   const VEIL_PEAK = 0.94;
   const lastServiceKey = serviceVisuals[serviceVisuals.length - 1]?.dataset.service;
+  // SMM — первая услуга группы — раньше появлялась не синхронно с самим
+  // выездом «Услуг» поверх «Начала» (см. .hero-pin выше): insideServices
+  // (а с ним и .is-active) держится строго до heroPinBottom, а класс сам
+  // по себе включает 0.7s CSS-transition — время, а не скролл. При обычной
+  // скорости скролла к моменту heroPinBottom текст карточки уже почти
+  // полностью проявлен (у него свой, более ранний триггер — IntersectionObserver
+  // на .service-block-inner), а картинка ещё только начинала фейдиться —
+  // получался читаемый разрыв: серый фон уже сменился, текст уже виден,
+  // а предметной анимации ещё нет ни кадра. ENTRANCE_FADE_PX открывает
+  // окно ДО heroPinBottom, равное как раз "выездной" части hero-pin (его
+  // распорка — 150vh, из них ровно innerHeight*0.5 — тот хвост, где
+  // следующая секция реально едет по экрану поверх прилипшего «Начала»,
+  // см. комментарий у .hero-pin) — картинка теперь въезжает СНИЗУ
+  // (translateY от +64px к 0, входит одновременно с тем же движением,
+  // которым «Услуги» и так уже наезжают на «Начало»), а не всплывает
+  // отдельным, ничем не привязанным к этому выезду фейдом уже после
+  // того, как хero скрылся целиком.
+  const ENTRANCE_FADE_PX = window.innerHeight * 0.5;
+  const ENTRANCE_TRANSLATE_PX = 64;
+  const firstServiceKey = serviceVisuals[0]?.dataset.service;
   serviceVisuals.forEach((v) => {
     const isCurrent = insideServices && v.dataset.service === currentServiceRaw;
-    v.classList.toggle('is-active', isCurrent);
+    const isEnteringFirst = !insideServices && !isCurrent
+      && v.dataset.service === firstServiceKey && v.dataset.service === currentServiceRaw
+      && rawCenter >= servicesTop && rawScrollY < heroPinBottom
+      && rawScrollY >= heroPinBottom - ENTRANCE_FADE_PX;
+    v.classList.toggle('is-active', isCurrent || isEnteringFirst);
     // .is-out — мгновенное (без transition) гашение строго при выходе
     // из всей группы «Услуг»: плавный кросс-фейд там, где он уместен —
     // между соседними услугами внутри группы, а не когда сцена целиком
@@ -389,19 +413,29 @@ function updateTheme(scrollPos) {
     // Home/End, якорная ссылка) — там угасание успевало бы "просвечивать"
     // поверх уже начавшейся следующей секции. Для самой последней услуги
     // этот путь и так уже закрыт постепенным угасанием выше — .is-out
-    // здесь просто гарантирует финальный 0, а не начинает его
-    v.classList.toggle('is-out', !insideServices);
+    // здесь просто гарантирует финальный 0, а не начинает его. Окно
+    // entrance у первой услуги гасить им нельзя — оно и так строго до
+    // heroPinBottom, дальше подхватывает обычный is-active
+    v.classList.toggle('is-out', !insideServices && !isEnteringFirst);
     if (isCurrent && v.dataset.service === lastServiceKey) {
       const distToEnd = servicesBottom - rawScrollY;
       if (distToEnd < EXIT_FADE_PX) {
         v.style.transition = 'none';
+        v.style.transform = '';
         v.style.opacity = Math.max(0, Math.min(1, distToEnd / EXIT_FADE_PX));
       } else {
         v.style.transition = '';
+        v.style.transform = '';
         v.style.opacity = '';
       }
+    } else if (isEnteringFirst) {
+      const progress = 1 - Math.max(0, Math.min(1, (heroPinBottom - rawScrollY) / ENTRANCE_FADE_PX));
+      v.style.transition = 'none';
+      v.style.opacity = progress;
+      v.style.transform = `translateY(${(ENTRANCE_TRANSLATE_PX * (1 - progress)).toFixed(1)}px)`;
     } else {
       v.style.transition = '';
+      v.style.transform = '';
       v.style.opacity = '';
     }
   });
