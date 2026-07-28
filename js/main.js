@@ -154,30 +154,52 @@ if (!prefersNoParallax) {
 }
 
 // заминка скролла на входе в «Знакомство» — единственное место на
-// странице, где мы реально перехватываем wheel и на короткое время не
+// странице, где мы реально перехватываем скролл и на короткое время не
 // даём странице ехать дальше (см. README «Скролл: нативный, без
 // сторонних библиотек» — везде остальные это осознанно НЕ делают; тут
 // по прямой просьбе именно такого эффекта, не просто более длинного
 // pin). Срабатывает только при входе (пересечение introSceneTop вниз),
 // не на выходе, и каждый раз заново — прокрутили обратно вверх и снова
-// вниз, заминка повторится. Ловим только wheel (мышь/трекпад) — touchmove
-// на тач-устройствах перехватывать не стали: там это читается как
-// зависшая страница, а не как пауза, поэтому эффект просто выключен
-// тем же prefersNoParallax, что гасит и остальной параллакс на странице.
-// Клавиатурный скролл (Space/PageDown/стрелки) через этот путь не идёт
-// и заминку не увидит — сознательный компромисс, не покрывать его тоже
+// вниз, заминка повторится.
+//
+// Первая версия только вызывала preventDefault() на wheel — в headless
+// Playwright-тесте (синтетические wheel-события, обрабатываются главным
+// потоком напрямую) это честно останавливало скролл, но на реальном
+// трекпаде/колесе в Chrome эффекта не было вообще: инерционная прокрутка
+// (momentum/fling) после трекпад-жеста едет на compositor-потоке уже не
+// как поток wheel-событий, а как собственная анимация браузера — на неё
+// preventDefault() в JS-обработчике wheel не действует никак, скролл
+// просто продолжает ехать поверх "заблокированных" событий.
+//
+// Рабочее решение — не пытаться заблокировать источник скролла (это и
+// есть корень прошлой проблемы), а на время паузы каждый кадр (rAF)
+// принудительно возвращать scrollY туда, где сцена должна была
+// остановиться (introSceneTop), независимо от того, чем именно скролл
+// был вызван — жестом, инерцией, клавиатурой, скроллбаром. preventDefault
+// на wheel оставлен как быстрый путь без "боя" со скроллом там, где он
+// всё же срабатывает (обычное колесо мыши без инерции) — просто больше
+// не единственная линия обороны.
 const INTRO_SCROLL_PAUSE_MS = 550;
 if (!prefersNoParallax && introSceneEl) {
-  let introScrollPauseActive = false;
   let introPauseLastY = window.scrollY;
+  let introPauseFrozenY = null;
+  let introPauseUntil = 0;
   window.addEventListener('wheel', (e) => {
-    if (introScrollPauseActive) e.preventDefault();
+    if (introPauseFrozenY !== null) e.preventDefault();
   }, { passive: false });
+  function introPauseTick() {
+    if (introPauseFrozenY === null) return;
+    if (performance.now() >= introPauseUntil) { introPauseFrozenY = null; return; }
+    if (window.scrollY !== introPauseFrozenY) window.scrollTo(0, introPauseFrozenY);
+    requestAnimationFrame(introPauseTick);
+  }
   window.addEventListener('scroll', () => {
     const y = window.scrollY;
-    if (!introScrollPauseActive && introPauseLastY < introSceneTop && y >= introSceneTop) {
-      introScrollPauseActive = true;
-      setTimeout(() => { introScrollPauseActive = false; }, INTRO_SCROLL_PAUSE_MS);
+    if (introPauseFrozenY === null && introPauseLastY < introSceneTop && y >= introSceneTop) {
+      introPauseFrozenY = introSceneTop;
+      introPauseUntil = performance.now() + INTRO_SCROLL_PAUSE_MS;
+      window.scrollTo(0, introPauseFrozenY);
+      requestAnimationFrame(introPauseTick);
     }
     introPauseLastY = y;
   }, { passive: true });
