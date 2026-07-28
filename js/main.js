@@ -153,6 +153,36 @@ if (!prefersNoParallax) {
   window.addEventListener('load', measureIntroScene);
 }
 
+// заминка скролла на входе в «Знакомство» — единственное место на
+// странице, где мы реально перехватываем wheel и на короткое время не
+// даём странице ехать дальше (см. README «Скролл: нативный, без
+// сторонних библиотек» — везде остальные это осознанно НЕ делают; тут
+// по прямой просьбе именно такого эффекта, не просто более длинного
+// pin). Срабатывает только при входе (пересечение introSceneTop вниз),
+// не на выходе, и каждый раз заново — прокрутили обратно вверх и снова
+// вниз, заминка повторится. Ловим только wheel (мышь/трекпад) — touchmove
+// на тач-устройствах перехватывать не стали: там это читается как
+// зависшая страница, а не как пауза, поэтому эффект просто выключен
+// тем же prefersNoParallax, что гасит и остальной параллакс на странице.
+// Клавиатурный скролл (Space/PageDown/стрелки) через этот путь не идёт
+// и заминку не увидит — сознательный компромисс, не покрывать его тоже
+const INTRO_SCROLL_PAUSE_MS = 550;
+if (!prefersNoParallax && introSceneEl) {
+  let introScrollPauseActive = false;
+  let introPauseLastY = window.scrollY;
+  window.addEventListener('wheel', (e) => {
+    if (introScrollPauseActive) e.preventDefault();
+  }, { passive: false });
+  window.addEventListener('scroll', () => {
+    const y = window.scrollY;
+    if (!introScrollPauseActive && introPauseLastY < introSceneTop && y >= introSceneTop) {
+      introScrollPauseActive = true;
+      setTimeout(() => { introScrollPauseActive = false; }, INTRO_SCROLL_PAUSE_MS);
+    }
+    introPauseLastY = y;
+  }, { passive: true });
+}
+
 /* ==================================================================
    ФОН СЕКЦИЙ — вся страница как единое полотно с непрерывным градиентом
    между тёмными и светлыми разделами, а не набор карточек-секций со
