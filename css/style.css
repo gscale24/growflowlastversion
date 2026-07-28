@@ -335,15 +335,16 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
 .reveal-block.is-visible{opacity:1;transform:translateY(0);}
 
 /* ---- Знакомство: живое видео на весь экран ----
-   Раньше здесь был единственный на сайте pinned-скраббинг покадровых
-   кадров (makeCoverScrubber) — заменён на обычное автовоспроизводящееся
-   зацикленное видео, тот же приём, что и в
-   hero (.hero-video): played на своей внутренней раскадровке, а не по
-   позиции скролла; секция всё ещё sticky на 100vh, чтобы под ней
-   оставался читаемый запас скролла для текста, но без прежних 320vh
-   (это имело смысл только пока прогресс скролла напрямую был кадром
-   ролика — сейчас это просто спейсер длины чтения). Синий акцент —
-   локальный оверрайд --accent, подхватывает цвет света в самом кадре. */
+   Раньше здесь был pinned-скраббинг покадровых JPG-кадров
+   (makeCoverScrubber) — теперь тот же скраббинг, но по currentTime
+   настоящего <video> (см. updateIntroParallax в js/main.js), а не по
+   img.src. На тач/prefers-reduced-motion (prefersNoParallax) вместо
+   скраббинга — обычный автоплей/луп, тот же приём, что и в hero
+   (.hero-video). Секция всё ещё sticky на 100vh, чтобы под ней
+   оставался читаемый запас скролла для текста, без прежних 320vh (это
+   имело смысл только для canvas-версии — сейчас это спейсер длины
+   чтения плюс диапазон скраббинга). Синий акцент — локальный оверрайд
+   --accent, подхватывает цвет света в самом кадре. */
 #sceneA{--accent:#5aa3e8;}
 .intro-scene{position:relative;height:180vh;}
 .intro-sticky{position:sticky;top:0;height:100vh;overflow:hidden;background:var(--bg);}

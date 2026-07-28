@@ -241,15 +241,16 @@
   </div>
 </div>
 
-<!-- ================= ЗНАКОМСТВО — живое проигрывающееся видео (короткий
-     зацикленный план стола сверху, играет по своей внутренней раскадровке,
-     не по позиции скролла — тот же приём, что и в hero), синий акцент —
-     тот же свет, что горит в кадре. Стоит после «Услуг» (не сразу
+<!-- ================= ЗНАКОМСТВО — видео-скраббинг: короткий непрерывный
+     план стола сверху, кадр которого напрямую завязан на позицию скролла
+     (см. updateIntroParallax в js/main.js) — видео не играет само по
+     себе, скролл прокручивает и позицию, и currentTime разом. Синий
+     акцент — тот же свет, что горит в кадре. Стоит после «Услуг» (не сразу
      после hero) — намеренный порядок, см. README ================= -->
 <section class="intro-scene" id="sceneA" data-theme="dark">
   <div class="intro-sticky">
     <div class="intro-video-wrap">
-      <video class="intro-video" id="introVideo" autoplay muted loop playsinline poster="assets/intro-poster.jpg"></video>
+      <video class="intro-video" id="introVideo" muted playsinline preload="auto" poster="assets/intro-poster.jpg"></video>
     </div>
     <div class="intro-tint"></div>
 

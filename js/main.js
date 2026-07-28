@@ -1,6 +1,6 @@
 /* ============ ТОЧКИ ПОДКЛЮЧЕНИЯ МЕДИА ============
-   Hero-видео + живое видео «Знакомства» (короткий зацикленный план,
-   обычный <video>, не покадровая секвенция — см. README). Остальные
+   Hero-видео (обычный автоплей) + видео «Знакомства», у которого
+   currentTime вместо автоплея завязан на скролл (см. README). Остальные
    секции идут обычным потоком без картинки, фон переключают
    [data-theme]. */
 const HERO_VIDEO_URL = "assets/hero.mp4";
@@ -64,19 +64,34 @@ setTimeout(finishPreloader, 4000);
 })();
 
 /* ==================================================================
-   ЗНАКОМСТВО — живое видео на весь экран (object-fit: cover через CSS,
-   не canvas). Раньше это был единственный на сайте покадровый
-   скролл-скраббинг (см. историю в README) — заменён на обычный
-   зацикленный <video>: играет по своей внутренней раскадровке, не по
-   позиции скролла (тот же приём, что и в hero) — но поверх этого ещё
-   лёгкий параллакс самого кадра относительно скролла, см.
-   updateIntroParallax ниже.
+   ЗНАКОМСТВО — видео на весь экран (object-fit: cover через CSS, не
+   canvas), но играет не само по себе: currentTime напрямую завязан на
+   позицию скролла, тем же приёмом, что раньше был у покадрового
+   canvas-скраббинга (см. историю в README) — только вместо смены
+   img.src между заранее нарезанными кадрами тут честный seek по
+   реальному видеопотоку. Ролик — короткий (3.3с) непрерывный план без
+   монтажных склеек, поэтому произвольный доступ к любой точке
+   осмыслен (в отличие от прежнего многоплан montажа, под который этот
+   приём не ложился). На тач-устройствах и при prefers-reduced-motion
+   (prefersNoParallax) скраббинг и translateY-параллакс отключены —
+   вместо этого простой автоплей/луп, тот же приём, что и в hero: видео
+   всё равно должно что-то показывать, даже если сам скролл не тикает
+   плавно кадр за кадром на этих устройствах.
    ================================================================== */
 const introVideoEl = document.getElementById('introVideo');
 const introCopy = document.getElementById('introCopy');
+let introVideoReady = false;
 (function initIntroVideo() {
   if (!introVideoEl || !INTRO_VIDEO_URL) return;
+  // preload="auto" — без него seekable-диапазон в части браузеров остаётся
+  // пустым, пока видео не догрузится "по требованию", и первые currentTime
+  // от скролла молча не применяются. Ролик короткий (3.3с), буферизуется
+  // целиком почти сразу, дальнейших догрузок по ходу скролла не бывает
+  introVideoEl.preload = 'auto';
   introVideoEl.src = INTRO_VIDEO_URL;
+  introVideoEl.load();
+  introVideoEl.addEventListener('loadedmetadata', () => { introVideoReady = true; }, { once: true });
+  if (prefersNoParallax) introVideoEl.loop = true;
 })();
 
 // стык предыдущей секции → «Знакомство» (сейчас это Услуги, но код не
@@ -88,16 +103,14 @@ const introCopy = document.getElementById('introCopy');
 // полную непрозрачность раньше, чем пользователь долистает до самого
 // пина, поэтому сам момент прилипания уже ничем не выделяется на глаз.
 // Разовый триггер, как и у остальных .reveal-block на странице — дальше
-// не трогаем. Текст (introCopy) и запуск воспроизведения видео теперь
-// висят на этом же триггере — раньше текст ждал, пока скролл-прогресс
-// покадрового скраббинга дойдёт до конкретного кадра (руки на
-// клавиатуре), сейчас прогресса такого рода нет: видео просто играет на
-// своей внутренней раскадровке, не на позиции скролла
+// не трогаем. Текст (introCopy) виснет на этом же триггере всегда;
+// автоплей запускаем только в фолбэке (prefersNoParallax) — в основном
+// режиме воспроизведение целиком за updateIntroParallax/currentTime
 const introRevealObserver = new IntersectionObserver((entries) => {
   entries.forEach((entry) => {
     if (entry.isIntersecting) {
       entry.target.classList.add('is-visible');
-      introVideoEl.play().catch(() => {});
+      if (prefersNoParallax) introVideoEl.play().catch(() => {});
       introCopy.classList.add('is-visible');
       introRevealObserver.unobserve(entry.target);
     }
@@ -105,17 +118,17 @@ const introRevealObserver = new IntersectionObserver((entries) => {
 }, { threshold: 0, rootMargin: '0px 0px 40% 0px' });
 introRevealObserver.observe(document.querySelector('.intro-sticky'));
 
-// параллакс видео «Знакомства» — та же идея, что и у карточек «Кейсов»
-// (updateCasesParallax ниже): видео едет чуть медленнее/иначе, чем сам
-// скролл, создавая ощущение глубины (текст и тонировка — в обычном
-// потоке страницы, никуда не сдвигаются). Секция pinned ровно на
-// intro-scene.offsetHeight - 100vh пикселей скролла (см. .intro-scene в
-// css/style.css) — прогресс считается от этого же диапазона: 0 в
-// момент прилипания, 1 перед самым отлипанием. .intro-video специально
-// на 12% выше/шире своей обёртки (см. css/style.css) — translateY в
+// скраббинг + лёгкий параллакс видео «Знакомства»: секция pinned ровно
+// на intro-scene.offsetHeight - 100vh пикселей скролла (см. .intro-scene
+// в css/style.css) — прогресс считается от этого же диапазона: 0 в
+// момент прилипания (первый кадр ролика), 1 перед самым отлипанием
+// (последний). currentTime = progress * duration — тот же прогресс,
+// что и у translateY-сдвига (тот же приём глубины, что и у параллакса
+// карточек «Кейсов», updateCasesParallax ниже): .intro-video специально
+// на 12% выше/шире своей обёртки (см. css/style.css), translateY в
 // пределах ±INTRO_PARALLAX_PX/2 никогда не оголяет край кадра.
-// Не гейтится на loadedmetadata/что-либо ещё — это transform самого
-// <video>, воспроизведение и позиционирование кадра друг другу не мешают
+// Гейтится на introVideoReady (loadedmetadata) — до того, как duration
+// известен, currentTime ставить не на что
 const introSceneEl = document.getElementById('sceneA');
 const INTRO_PARALLAX_PX = 70;
 let introSceneTop = 0, introSceneTotal = 0;
@@ -130,6 +143,9 @@ function updateIntroParallax(scrollPos) {
   const progress = Math.max(0, Math.min(1, (scrollPos - introSceneTop) / introSceneTotal));
   const offset = (progress - 0.5) * INTRO_PARALLAX_PX;
   introVideoEl.style.transform = `translateY(${offset.toFixed(1)}px)`;
+  if (introVideoReady && introVideoEl.duration) {
+    introVideoEl.currentTime = progress * introVideoEl.duration;
+  }
 }
 if (!prefersNoParallax) {
   measureIntroScene();
