@@ -485,7 +485,7 @@ window.addEventListener('scroll', () => {
    Ровно тот же промежуток, что и у полноэкранной картинки (.service-visual,
    см. updateTheme и css/style.css) — оба гарантированно синхронны, потому
    что оба меряются от одних и тех же .service-block. */
-const SERVICE_SCRUB_FRAMES = { smm: 40, target: 57, seo: 40, production: 40 };
+const SERVICE_SCRUB_FRAMES = { smm: 60, target: 57, seo: 40, production: 40 };
 // доля своего "активного окна" (0..1), за которую анимация обязана
 // доиграть до последнего кадра и дальше держать его неподвижным. По
 // умолчанию (production и SEO) это 1 — доигрывает весь путь, вплоть до
@@ -501,7 +501,7 @@ const SERVICE_SCRUB_FRAMES = { smm: 40, target: 57, seo: 40, production: 40 };
 // сама услуга ещё далеко не дочитана. Растянуть на весь путь (как
 // Продакшн) для этого конкретного ролика ближе к правде: кадр меняется
 // на всём протяжении чтения, никогда не стоит слепым остатком
-const SERVICE_SCRUB_SETTLE = { smm: 0.6, target: 0.315 };
+const SERVICE_SCRUB_SETTLE = { smm: 0.9, target: 0.315 };
 function serviceFramePath(key, i) {
   return `assets/frames/${key}/f_${String(i + 1).padStart(3, '0')}.jpg`;
 }
