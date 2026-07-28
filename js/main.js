@@ -380,31 +380,43 @@ function updateTheme(scrollPos) {
   const VEIL_PEAK = 0.94;
   const lastServiceKey = serviceVisuals[serviceVisuals.length - 1]?.dataset.service;
   // SMM — первая услуга группы — раньше появлялась не синхронно с самим
-  // выездом «Услуг» поверх «Начала» (см. .hero-pin выше): insideServices
-  // (а с ним и .is-active) держится строго до heroPinBottom, а класс сам
-  // по себе включает 0.7s CSS-transition — время, а не скролл. При обычной
-  // скорости скролла к моменту heroPinBottom текст карточки уже почти
-  // полностью проявлен (у него свой, более ранний триггер — IntersectionObserver
-  // на .service-block-inner), а картинка ещё только начинала фейдиться —
-  // получался читаемый разрыв: серый фон уже сменился, текст уже виден,
-  // а предметной анимации ещё нет ни кадра. ENTRANCE_FADE_PX открывает
-  // окно ДО heroPinBottom, равное как раз "выездной" части hero-pin (его
-  // распорка — 150vh, из них ровно innerHeight*0.5 — тот хвост, где
-  // следующая секция реально едет по экрану поверх прилипшего «Начала»,
-  // см. комментарий у .hero-pin) — картинка теперь въезжает СНИЗУ
-  // (translateY от +64px к 0, входит одновременно с тем же движением,
-  // которым «Услуги» и так уже наезжают на «Начало»), а не всплывает
-  // отдельным, ничем не привязанным к этому выезду фейдом уже после
-  // того, как хero скрылся целиком.
-  const ENTRANCE_FADE_PX = window.innerHeight * 0.5;
-  const ENTRANCE_TRANSLATE_PX = 64;
+  // выездом «Услуг» поверх «Начала»: insideServices (а с ним и .is-active)
+  // держится строго до heroPinBottom, а класс сам по себе включает 0.7s
+  // CSS-transition — время, а не скролл. При обычной скорости скролла к
+  // моменту heroPinBottom текст карточки (свой, более ранний
+  // IntersectionObserver) уже почти полностью проявлен, а картинка ещё
+  // только начинала фейдиться — читаемый разрыв: фон уже сменился, текст
+  // уже виден, а предметной анимации ещё нет ни кадра.
+  //
+  // Первая попытка починить это была через opacity/translateY ДО
+  // heroPinBottom — и воспроизвела ровно тот баг, из-за которого
+  // heroPinBottom вообще появился (см. комментарий у .hero-pin выше):
+  // «Начало» — sticky, не fixed, и реально начинает свой выезд не в
+  // heroPinBottom, а на HERO_SLIDE_PX=innerHeight (высота .hero) РАНЬШЕ
+  // него — весь этот промежуток экран буквально наполовину «Начало»
+  // (сверху) и наполовину «Услуги» (снизу, натурально проступают по мере
+  // скролла). .service-visual же — fixed на ВЕСЬ экран целиком и понятия
+  // не имеет об этой границе: полупрозрачная картинка поверх ещё видимого
+  // «Начала» давала двойную экспозицию (клавиатура/кнопка hero
+  // просвечивают сквозь логотипы — баг с реального скриншота).
+  //
+  // Правильное решение — не полупрозрачность, а `clip-path`, синхронный
+  // с реальной видимой высотой «Начала»: пока sticky-«Начало» ещё видно
+  // на heroVisiblePx пикселей сверху экрана, ровно эта же полоса картинки
+  // услуги обрезана (`inset(heroVisiblePx 0 0 0)`) — видна только та часть
+  // картинки, что приходится на уже освободившуюся снизу часть экрана, ту
+  // же, которую и так открывает натуральный выезд «Услуг». Там, где
+  // «Начало» ещё видно, картинки просто нет вообще, а не полупрозрачный
+  // слой поверх него — двойная экспозиция физически невозможна.
+  const HERO_SLIDE_PX = window.innerHeight;
   const firstServiceKey = serviceVisuals[0]?.dataset.service;
   serviceVisuals.forEach((v) => {
     const isCurrent = insideServices && v.dataset.service === currentServiceRaw;
+    const heroVisiblePx = Math.max(0, Math.min(HERO_SLIDE_PX, heroPinBottom - rawScrollY));
     const isEnteringFirst = !insideServices && !isCurrent
       && v.dataset.service === firstServiceKey && v.dataset.service === currentServiceRaw
       && rawCenter >= servicesTop && rawScrollY < heroPinBottom
-      && rawScrollY >= heroPinBottom - ENTRANCE_FADE_PX;
+      && heroPinBottom - rawScrollY <= HERO_SLIDE_PX;
     v.classList.toggle('is-active', isCurrent || isEnteringFirst);
     // .is-out — мгновенное (без transition) гашение строго при выходе
     // из всей группы «Услуг»: плавный кросс-фейд там, где он уместен —
@@ -422,20 +434,23 @@ function updateTheme(scrollPos) {
       if (distToEnd < EXIT_FADE_PX) {
         v.style.transition = 'none';
         v.style.transform = '';
+        v.style.clipPath = '';
         v.style.opacity = Math.max(0, Math.min(1, distToEnd / EXIT_FADE_PX));
       } else {
         v.style.transition = '';
         v.style.transform = '';
+        v.style.clipPath = '';
         v.style.opacity = '';
       }
     } else if (isEnteringFirst) {
-      const progress = 1 - Math.max(0, Math.min(1, (heroPinBottom - rawScrollY) / ENTRANCE_FADE_PX));
       v.style.transition = 'none';
-      v.style.opacity = progress;
-      v.style.transform = `translateY(${(ENTRANCE_TRANSLATE_PX * (1 - progress)).toFixed(1)}px)`;
+      v.style.transform = '';
+      v.style.opacity = '1';
+      v.style.clipPath = `inset(${heroVisiblePx.toFixed(1)}px 0 0 0)`;
     } else {
       v.style.transition = '';
       v.style.transform = '';
+      v.style.clipPath = '';
       v.style.opacity = '';
     }
   });
