@@ -189,20 +189,43 @@ if (!prefersNoParallax) {
 const bgLayer = document.getElementById('bgLayer');
 const rootStyle = document.documentElement.style;
 const serviceTabs = Array.from(document.querySelectorAll('.services-tab'));
-// граница конца всей группы «Услуг» — нужна только чёрной дымке на стыке
-// со «Знакомством» (servicesExitVeilEl ниже), сами карточки услуг больше
-// не завязаны на эти границы: каждая складывается стопкой сама по себе
-// (position:sticky в своём .service-pin, см. css/style.css), без единого
-// fixed-слоя, за которым нужно было бы отдельно следить
+const serviceVisuals = Array.from(document.querySelectorAll('.service-visual'));
+// границы всей группы «Услуг» — .service-visual (position:fixed на весь
+// экран) обязан гаснуть за её пределами, иначе currentService, однажды
+// выставленный последней услугой, так и остался бы navigation ссылкой
+// без сброса, и полноэкранная картинка Продакшна осталась бы висеть
+// поверх «Кейсов»/«Контактов»
 const servicesGroupEl = document.getElementById('sceneB');
 const servicesExitVeilEl = document.querySelector('.services-exit-veil');
-let servicesBottom = 0;
+const servicesCardVeilEl = document.querySelector('.services-card-veil');
+const CARD_VEIL_HALF_WIDTH = 220;
+const CARD_VEIL_PEAK = 0.45;
+let servicesTop = 0, servicesBottom = 0;
 function measureServicesBounds() {
-  servicesBottom = servicesGroupEl.getBoundingClientRect().top + window.scrollY + servicesGroupEl.offsetHeight;
+  servicesTop = servicesGroupEl.getBoundingClientRect().top + window.scrollY;
+  servicesBottom = servicesTop + servicesGroupEl.offsetHeight;
 }
 measureServicesBounds();
 window.addEventListener('resize', measureServicesBounds);
 window.addEventListener('load', measureServicesBounds);
+
+// hero-pin (см. .hero-pin в css/style.css) — «Начало» стоит на месте, пока
+// «Услуги» выезжают поверх него снизу как шторка/ящик, и полностью
+// закрывают его только когда вся 150vh-распорка hero-pin прокручена.
+// currentService по чистой математике центра вьюпорта мог стать 'smm' ещё
+// на середине этого выезда — экран в этот момент реально наполовину hero,
+// наполовину «Услуги» (см. скриншот бага), а .service-visual (fixed) уже
+// понятия не имеет об этой шторке и просто рисуется поверх всего. Порог
+// heroPinBottom не даёт полноэкранной картинке появиться, пока «Начало»
+// физически не скрылось целиком.
+const heroPinEl = document.querySelector('.hero-pin');
+let heroPinBottom = 0;
+function measureHeroPin() {
+  heroPinBottom = heroPinEl.getBoundingClientRect().top + window.scrollY + heroPinEl.offsetHeight;
+}
+measureHeroPin();
+window.addEventListener('resize', measureHeroPin);
+window.addEventListener('load', measureHeroPin);
 
 // цветовые опоры тем — те же значения, что раньше жили в [data-theme] CSS
 // services — отдельная от light опора специально для «Услуг»: те же
@@ -313,27 +336,96 @@ function updateTheme(scrollPos) {
     serviceTabs.forEach((tab) => tab.classList.toggle('is-active', tab.dataset.service === currentService));
   }
 
-  // «нырок в чёрное» на стыке «Услуг» со «Знакомством» — самостоятельный
-  // слой поверх обеих секций, НЕ на сглаженном scrollPos, а на "сырой"
-  // window.scrollY (при быстрой прокрутке smoothY заметно отстаёт от
-  // реального скролла — для плавно едущего фона это незаметно, а для
-  // fixed-слоя поверх всего экрана дало бы видимый лаг на стыке).
-  // Нужен из-за стыка самих секций, не из-за карточек услуг внутри (те
-  // складываются стопкой сами по себе, см. .service-block в
-  // css/style.css) — `.services-group` стоит с явным z-index:2 (нужен,
-  // чтобы гарантированно рисоваться поверх sticky hero), а следующее за
-  // ней «Знакомство» — обычный position:relative без z-index, так что
-  // по умолчанию рисовалось бы ПОД «Услугами» независимо от скролла.
-  // Несимметричная огибающая с настоящим плато: чернота нарастает
-  // ЗАРАНЕЕ и полностью держится (VEIL_PEAK) весь стык, спадает же
-  // дольше и только ПОСЛЕ — «Знакомство» проявляется уже из готовой
-  // темноты, а не одновременно с ней. Дистанции (изначально
+  // полноэкранная картинка услуги — НЕ на сглаженном scrollPos, а на
+  // "сырой" window.scrollY. При быстрой прокрутке smoothY (полупериод
+  // сглаживания 80мс) заметно отстаёт от реального скролла — для
+  // плавно едущего фона это незаметно, а вот .service-visual, будучи
+  // fixed на весь экран, при таком отставании оставался виден ПОВЕРХ
+  // уже прокрученной сцены «Знакомство»: экран реально проехал в тёмную
+  // сцену, а лагающий JS ещё считал, что активна услуга — отсюда
+  // призрачное наложение картинки услуги на уже открывшуюся сцену.
+  const rawScrollY = window.scrollY;
+  const rawCenter = rawScrollY + window.innerHeight / 2;
+  let currentServiceRaw = null;
+  for (const s of themeSections) {
+    if (s.docTop <= rawCenter) { if (s.service) currentServiceRaw = s.service; }
+    else break;
+  }
+  // insideServices гасит все четыре, как только «Услуги» вообще ушли за
+  // пределы вьюпорта — иначе currentServiceRaw, однажды выставленный,
+  // остался бы висеть и поверх «Кейсов»/«Контактов». Верхняя граница —
+  // rawScrollY, а не rawCenter (см. heroPinBottom ниже): «Знакомство»
+  // сразу после «Услуг» — pinned-секция (.intro-sticky, position:sticky
+  // top:0), которая реально закрывает экран целиком только когда верх
+  // её 320vh-контейнера доскроллил до верха вьюпорта, т.е. когда
+  // rawScrollY достиг servicesBottom. Если гасить картинку услуги по
+  // rawCenter (раньше на пол-экрана вьюпорта), между её мгновенным
+  // исчезновением и полным "прилипанием" следующей сцены остаётся
+  // честная пустота: сверху — голый фон, снизу — ещё не прилипший край
+  // канваса «Знакомства» (тот самый скриншот-баг с пустым верхом и
+  // тёмным столом только внизу кадра)
+  const insideServices = rawCenter >= servicesTop && rawScrollY < servicesBottom && rawScrollY >= heroPinBottom;
+  // последняя услуга — не мгновенный .is-out на самой границе группы, а
+  // ПОСТЕПЕННОЕ угасание в последние EXIT_FADE_PX перед ней, напрямую
+  // функцией rawScrollY (не CSS-transition — inline opacity считается
+  // каждый тик и не может отстать при быстрой прокрутке, та же техника,
+  // что и у дробного кросс-фейда кадров в updateServiceScrub). К этому
+  // моменту «Знакомство» под ней уже полностью прогрето и видно на всю
+  // непрозрачность (см. introRevealObserver, огромный rootMargin), так
+  // что угасание — настоящий кросс-фейд в готовую сцену, а не в пустоту.
+  // Раньше здесь тоже был мгновенный обрыв — картинка последней услуги
+  // просто "стояла" статично до самой границы, а следом сразу щёлкала в
+  // «Знакомство»; фидбек был в том, что этот статичный хвост (кадр уже
+  // не меняется, текста рядом тоже нет — см. .service-block-inner, он
+  // в потоке и уходит из вьюпорта раньше, чем фиксированная картинка)
+  // читался как пустой обрыв, а не как продуманный переход
+  const EXIT_FADE_PX = 220;
+  const VEIL_PEAK = 0.94;
+  const lastServiceKey = serviceVisuals[serviceVisuals.length - 1]?.dataset.service;
+  serviceVisuals.forEach((v) => {
+    const isCurrent = insideServices && v.dataset.service === currentServiceRaw;
+    v.classList.toggle('is-active', isCurrent);
+    // .is-out — мгновенное (без transition) гашение строго при выходе
+    // из всей группы «Услуг»: плавный кросс-фейд там, где он уместен —
+    // между соседними услугами внутри группы, а не когда сцена целиком
+    // сменилась на «Кейсы»/«Контакты» через любой другой путь (клавиша
+    // Home/End, якорная ссылка) — там угасание успевало бы "просвечивать"
+    // поверх уже начавшейся следующей секции. Для самой последней услуги
+    // этот путь и так уже закрыт постепенным угасанием выше — .is-out
+    // здесь просто гарантирует финальный 0, а не начинает его
+    v.classList.toggle('is-out', !insideServices);
+    if (isCurrent && v.dataset.service === lastServiceKey) {
+      const distToEnd = servicesBottom - rawScrollY;
+      if (distToEnd < EXIT_FADE_PX) {
+        v.style.transition = 'none';
+        v.style.opacity = Math.max(0, Math.min(1, distToEnd / EXIT_FADE_PX));
+      } else {
+        v.style.transition = '';
+        v.style.opacity = '';
+      }
+    } else {
+      v.style.transition = '';
+      v.style.opacity = '';
+    }
+  });
+  // «нырок в чёрное» на стыке с «Знакомством» — не сам кросс-фейд картинки
+  // (это уже даёт угасание выше), а самостоятельный слой поверх обеих
+  // сцен. Раньше это была симметричная волна с пиком РОВНО на границе —
+  // темнота нарастала и сразу же начинала рассеиваться в одной и той же
+  // точке, картинка следующей сцены проступала одновременно с пиком
+  // черноты. Это не читалось как "уже стемнело, и из темноты выпадает
+  // Знакомство" — скорее как обычный, просто более широкий кросс-фейд.
+  // Сейчас — несимметричная огибающая с настоящим плато: чернота
+  // нарастает ЗАРАНЕЕ и полностью держится (VEIL_PEAK) весь стык внутри
+  // ПОКА услуга ещё показана, спадает же куда дольше и только ПОСЛЕ —
+  // «Знакомство» реально проявляется уже из готовой темноты, а не
+  // одновременно с ней. veilRise/veilHold/veilFall — три сегмента
+  // signed-расстояния rawScrollY − servicesBottom (отрицательное —
+  // подход, положительное — уже после стыка). Дистанции (изначально
   // -1150/-350/200/1000) уменьшены больше чем вдвое по фидбеку — весь
   // манёвр укладывался в 2150px скролла и читался как затянувшийся
   // чёрный экран, а не быстрый переход; пропорции (подъём/плато/спад)
   // сохранены теми же
-  const rawScrollY = window.scrollY;
-  const VEIL_PEAK = 0.94;
   if (servicesExitVeilEl) {
     const d = rawScrollY - servicesBottom;
     const RISE_START = -520, PEAK_START = -160, PEAK_END = 90, FALL_END = 450;
@@ -343,6 +435,25 @@ function updateTheme(scrollPos) {
     else if (d <= PEAK_END) veilT = 1;
     else veilT = 1 - smoothstep((d - PEAK_END) / (FALL_END - PEAK_END));
     servicesExitVeilEl.style.opacity = veilT * VEIL_PEAK;
+  }
+  // мягкая белая дымка МЕЖДУ самими карточками услуг (см. .services-
+  // card-veil в css/style.css) — не полноценный "нырок", как чёрная
+  // дымка выше, а лёгкая добавка поверх уже идущего кросс-фейда
+  // .service-visual.is-active: одиночный симметричный пик (не плато)
+  // ровно на границе каждой пары карточек. Границы — docTop каждого
+  // .service-block, КРОМЕ самого первого (SMM) — та граница вообще-то
+  // стык с hero, а не "между карточками услуг", её не трогаем
+  if (servicesCardVeilEl) {
+    const boundaries = themeSections.filter((s) => s.service).map((s) => s.docTop).slice(1);
+    let cardVeilT = 0;
+    for (const boundary of boundaries) {
+      const bd = Math.abs(rawScrollY - boundary);
+      if (bd < CARD_VEIL_HALF_WIDTH) {
+        const t = 1 - smoothstep(bd / CARD_VEIL_HALF_WIDTH);
+        if (t > cardVeilT) cardVeilT = t;
+      }
+    }
+    servicesCardVeilEl.style.opacity = cardVeilT * CARD_VEIL_PEAK;
   }
 }
 
@@ -391,12 +502,11 @@ window.addEventListener('scroll', () => {
 
    Прогресс считается от "активного окна" конкретной услуги — того же
    самого промежутка, на который завязана подсветка вкладки и currentService
-   в updateTheme выше: 0 — сервис только что стал текущим (его .service-pin
+   в updateTheme ниже: 0 — сервис только что стал текущим (его .service-block
    докрутился до центра вьюпорта), 1 — вот-вот станет текущим следующий.
-   Измеряется от .service-pin (150vh-распорка, см. css/style.css), а не от
-   самого .service-block — тот теперь sticky и всегда высотой ровно 100vh,
-   его собственный rect ничего не говорит о том, сколько скролла прошло
-   внутри пина. */
+   Ровно тот же промежуток, что и у полноэкранной картинки (.service-visual,
+   см. updateTheme и css/style.css) — оба гарантированно синхронны, потому
+   что оба меряются от одних и тех же .service-block. */
 const SERVICE_SCRUB_FRAMES = { smm: 40, target: 57, seo: 40, production: 40 };
 // доля своего "активного окна" (0..1), за которую анимация обязана
 // доиграть до последнего кадра и дальше держать его неподвижным. По
@@ -417,19 +527,18 @@ const SERVICE_SCRUB_SETTLE = { smm: 0.6, target: 0.315 };
 function serviceFramePath(key, i) {
   return `assets/frames/${key}/f_${String(i + 1).padStart(3, '0')}.jpg`;
 }
-const serviceScrubEls = Array.from(document.querySelectorAll('.service-pin')).map((pin) => {
-  const block = pin.querySelector('.service-block');
-  const frameImgs = pin.querySelectorAll('.service-visual-frame');
+const serviceScrubEls = Array.from(document.querySelectorAll('.service-block')).map((block) => {
+  const frameImgs = block.querySelectorAll('.service-visual-frame');
   const img = frameImgs[0];
   const imgNext = frameImgs[1];
   const key = img && img.dataset.frames;
   const count = key ? SERVICE_SCRUB_FRAMES[key] : 0;
-  return count ? { pin, block, img, imgNext, key, count, warmed: false, top: 0, height: 0, lastIndex: 0, lastNextIndex: -1 } : null;
+  return count ? { block, img, imgNext, key, count, warmed: false, top: 0, height: 0, lastIndex: 0, lastNextIndex: -1 } : null;
 }).filter(Boolean);
 
 function measureServiceScrub() {
   serviceScrubEls.forEach((s) => {
-    const rect = s.pin.getBoundingClientRect();
+    const rect = s.block.getBoundingClientRect();
     s.top = rect.top + window.scrollY;
     s.height = rect.height;
   });
@@ -464,7 +573,8 @@ if (serviceScrubEls[0]) warmServiceFrames(serviceScrubEls[0]);
 // и не декоративный параллакс, а прямое отражение прокрутки: кадр всегда
 // 1:1 со скроллом пользователя.
 // Читает window.scrollY напрямую, а не сглаженный smoothY (в отличие от
-// большинства других update-функций) — скрабу нужна точность к реальному
+// большинства других update-функций) — та же причина, что и у
+// insideServices в updateTheme: скрабу нужна точность к реальному
 // скроллу, а не эффект "картинка ещё доезжает" при быстрой прокрутке
 //
 // Кадр держится не одним <img>, а парой (см. .service-visual-frame.is-next
@@ -790,10 +900,11 @@ const stopSections = {
 // у большинства опор рейл заранее (за полэкрана) подсвечивает следующую
 // секцию — уместно для простого индикатора чтения. Но sceneA
 // («Знакомство») сразу после «Услуг» — pinned-сцена, которая реально
-// закрывает экран только когда скролл (без запаса в полэкрана) реально
-// доскроллил до её верха. Если подсвечивать «Знакомство» на полэкрана
-// раньше, рейл показывает один раздел, пока во весь экран ещё стоит
-// последняя карточка услуг — заметный разнобой сигналов на самом стыке
+// закрывает экран только когда сам rawScrollY (не с запасом в полэкрана)
+// доскроллил до её верха: та же причина, что и у insideServices выше.
+// Если подсвечивать «Знакомство» на полэкрана раньше, рейл показывает
+// один раздел, пока во весь экран ещё стоит картинка последней услуги —
+// заметный разнобой сигналов на самом стыке
 const RAIL_LEAD_FRACTION = { sceneA: 0 };
 function updateProgressRail(scrollPos) {
   const docHeight = document.body.scrollHeight - window.innerHeight;
