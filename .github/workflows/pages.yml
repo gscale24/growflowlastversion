@@ -19,6 +19,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Cache-bust CSS/JS references
+        # index.html ссылается на css/style.css и js/main.js без версии —
+        # браузер/GitHub Pages CDN может отдавать закешированную копию и
+        # после успешного деплоя ("как будто ничего не поменялось" на
+        # реальных правках). В репозитории версию руками не проставляем
+        # (незачем засорять git-историю), только в задеплоенной копии —
+        # ?v=<короткий SHA коммита>, меняется на каждый деплой сам
+        run: |
+          sed -i "s|css/style.css|css/style.css?v=${GITHUB_SHA::8}|; s|js/main.js|js/main.js?v=${GITHUB_SHA::8}|" index.html
       - uses: actions/configure-pages@v5
         with:
           enablement: true
