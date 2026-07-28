@@ -367,10 +367,18 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
   transition:opacity 1s var(--ease), transform 1.1s var(--ease);
 }
 .intro-sticky.is-visible .intro-video-wrap{opacity:1;transform:scale(1);}
-/* выше и шире контейнера на запас параллакса (см. INTRO_PARALLAX_PX в
-   js/main.js) — translateY внутри этого запаса никогда не оголяет край */
+/* выше контейнера ровно на запас параллакса (см. INTRO_PARALLAX_PX=70 в
+   js/main.js, сдвиг ±35px) + 10px буфера — translateY внутри этого
+   запаса никогда не оголяет край. Раньше запас был в % (-6%/112%) —
+   при обычной высоте вьюпорта это давало кратно больше отступа, чем
+   реально требуют ±35px, и без нужды "зумило" картинку сильнее, чем
+   того требует чистый object-fit:cover портретного видео в альбомном
+   контейнере (той зум неизбежен и без запаса параллакса). Фиксированный
+   пиксельный запас не зависит от высоты экрана — минимален и на низких,
+   и на высоких вьюпортах, в отличие от % (на вьюпортах ниже ~583px
+   старый запас в 6% давал бы меньше 35px и всё равно оголял край) */
 .intro-video{
-  position:absolute;left:0;right:0;top:-6%;height:112%;width:100%;
+  position:absolute;left:0;right:0;top:-45px;height:calc(100% + 90px);width:100%;
   object-fit:cover;object-position:center;display:block;
   will-change:transform;
 }
@@ -522,6 +530,14 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
   transition:clip-path 1.1s var(--ease);
 }
 .service-block.is-visible .service-word{clip-path:inset(0 -50vw 0% -50vw);}
+/* "ПРОДАКШН" физически шире, чем остальные три слова (SMM/Таргет/SEO)
+   на том же --fs-h2 — при боксе шириной 480px (см. .service-block-inner)
+   слово упиралось в --fs-h2:110px и вылезало за пределы своей плашки
+   прямо на видеофон позади (было видно на скриншоте). Понижаем --fs-h2
+   только для этого слова, тем же профилем clamp, но с коэффициентом
+   ~0.72 (подобран измерением scrollWidth в браузере на ширинах от 375
+   до 2560px — влезает вплотную, без запаса, на всех) */
+.service-block[data-service="production"] .service-word{font-size:clamp(36px, 5.2vw, 79px);}
 /* Копирайтинг по формуле наблюдение → что делаем → жирный вывод — три
    короткие строки вместо одного длинного абзаца-простыни. Последняя
    строка (--strong) чуть крупнее и на полном --fg, а не --fg-dim —
