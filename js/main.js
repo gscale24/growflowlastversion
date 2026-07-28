@@ -502,17 +502,6 @@ const SERVICE_SCRUB_FRAMES = { smm: 60, target: 57, seo: 40, production: 40 };
 // Продакшн) для этого конкретного ролика ближе к правде: кадр меняется
 // на всём протяжении чтения, никогда не стоит слепым остатком
 const SERVICE_SCRUB_SETTLE = { smm: 0.9, target: 0.315 };
-// SMM — первая карточка группы, её видно сразу, как открываешь «Услуги»,
-// а прогресс по умолчанию (см. raw в updateServiceScrub) считается от
-// пересечения ЦЕНТРА вьюпорта с блоком — до этого момента вращение
-// логотипов стоит на первом кадре, пока карточка всё ещё проявляется
-// (полэкрана мёртвого скролла). Только у SMM сдвигаем старт раньше на
-// половину высоты вьюпорта — тогда вращение уже идёт к моменту, когда
-// карточка реально читается, а не после того как читатель уже долистал
-// до её середины. У Таргета/SEO/Продакшна такого нет специально — там
-// действующий стык с предыдущей карточкой и настроенный по кульминации
-// финиш (см. SERVICE_SCRUB_SETTLE) — трогать не стали
-const SERVICE_SCRUB_LEAD = { smm: 0.5 };
 function serviceFramePath(key, i) {
   return `assets/frames/${key}/f_${String(i + 1).padStart(3, '0')}.jpg`;
 }
@@ -591,8 +580,7 @@ function updateServiceScrub() {
   const center = window.scrollY + window.innerHeight / 2;
   serviceScrubEls.forEach((s) => {
     const settle = SERVICE_SCRUB_SETTLE[s.key] ?? 1;
-    const lead = (SERVICE_SCRUB_LEAD[s.key] ?? 0) * window.innerHeight;
-    const raw = (center - s.top + lead) / s.height;
+    const raw = (center - s.top) / s.height;
     const progress = Math.max(0, Math.min(1, raw / settle));
     const pos = progress * (s.count - 1);
     const baseIdx = Math.floor(pos);
