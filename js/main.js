@@ -227,6 +227,7 @@ const serviceVisuals = Array.from(document.querySelectorAll('.service-visual'));
 // без сброса, и полноэкранная картинка Продакшна осталась бы висеть
 // поверх «Кейсов»/«Контактов»
 const servicesGroupEl = document.getElementById('sceneB');
+const servicesExitVeilEl = document.querySelector('.services-exit-veil');
 let servicesTop = 0, servicesBottom = 0;
 function measureServicesBounds() {
   servicesTop = servicesGroupEl.getBoundingClientRect().top + window.scrollY;
@@ -407,6 +408,13 @@ function updateTheme(scrollPos) {
   // в потоке и уходит из вьюпорта раньше, чем фиксированная картинка)
   // читался как пустой обрыв, а не как продуманный переход
   const EXIT_FADE_PX = 480;
+  // ширина и пик "нырка в чёрное" (см. servicesExitVeilEl ниже) — чуть
+  // уже, чем EXIT_FADE_PX, чтобы веиль успевал заметно нарасти именно к
+  // моменту, когда картинка последней услуги уже почти угасла, а не
+  // размазываться на весь путь угасания незаметной дымкой; пик — не
+  // полный 1 (глухая чернота на миг читалась бы как баг/фриз), а 0.94
+  const VEIL_HALF_PX = 360;
+  const VEIL_PEAK = 0.94;
   const lastServiceKey = serviceVisuals[serviceVisuals.length - 1]?.dataset.service;
   serviceVisuals.forEach((v) => {
     const isCurrent = insideServices && v.dataset.service === currentServiceRaw;
@@ -434,6 +442,17 @@ function updateTheme(scrollPos) {
       v.style.opacity = '';
     }
   });
+  // «нырок в чёрное» ровно на границе группы — не сам кросс-фейд картинки
+  // (это уже даёт угасание выше), а самостоятельный слой поверх обеих
+  // сцен, треугольной волной от rawScrollY: 0 на подходе → почти сплошной
+  // чёрный ровно в момент передачи → снова 0, когда «Знакомство» уже само
+  // на весь экран. Симметрично работает и при скролле вверх (см. Math.abs)
+  if (servicesExitVeilEl) {
+    const veilDist = Math.abs(rawScrollY - servicesBottom);
+    servicesExitVeilEl.style.opacity = veilDist < VEIL_HALF_PX
+      ? (1 - veilDist / VEIL_HALF_PX) * VEIL_PEAK
+      : 0;
+  }
 }
 
 /* ==================================================================

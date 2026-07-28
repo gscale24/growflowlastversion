@@ -611,6 +611,20 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
      цветом (у SEO предмет как раз лежит в этой зоне и терялся под ней) */
   background:linear-gradient(to right, var(--bg) 0%, transparent 22%);
 }
+/* «нырок в чёрное» на стыке последней услуги и «Знакомства» — см.
+   veilEl/EXIT_FADE_PX в js/main.js. Непрозрачность считается прямо от
+   rawScrollY (та же техника, что и у графика затухания самой картинки
+   выше) как треугольная волна с пиком ровно на границе группы: 0 на
+   подходе → почти сплошной чёрный ровно в момент передачи → снова 0,
+   когда «Знакомство» уже полностью само на экране. Не кросс-фейд одной
+   картинки в другую (это уже даёт .service-visual/is-active сам по
+   себе), а самостоятельный слой поверх обеих — классический приём
+   монтажа "cross-dissolve through black", а не жёсткая склейка кадров */
+.services-exit-veil{
+  position:fixed;inset:0;z-index:2;
+  background:#000;opacity:0;pointer-events:none;
+  will-change:opacity;
+}
 
 @media (max-width:820px){
   /* горизонтальный паддинг здесь больше не переопределяется отдельно —
@@ -657,6 +671,11 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
   .service-block[data-dir="up"] .service-visual{transform:translateY(40px)!important;}
   .service-block.is-visible .service-visual{opacity:1!important;transform:translateY(0)!important;}
   .service-visual::after{content:none;}
+  /* на мобильном нет единого fixed-слоя, который эта дымка перекрывала
+     бы собой на стыке — .service-visual тут обычный баннер в потоке, и
+     чёрный fixed-слой во весь экран поверх него смотрелся бы как
+     самостоятельный, ничем не объяснённый глюк, а не как переход */
+  .services-exit-veil{display:none;}
 }
 
 /* ---- Кейсы ---- */
