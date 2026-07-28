@@ -197,9 +197,6 @@ const serviceVisuals = Array.from(document.querySelectorAll('.service-visual'));
 // поверх «Кейсов»/«Контактов»
 const servicesGroupEl = document.getElementById('sceneB');
 const servicesExitVeilEl = document.querySelector('.services-exit-veil');
-const servicesCardVeilEl = document.querySelector('.services-card-veil');
-const CARD_VEIL_HALF_WIDTH = 220;
-const CARD_VEIL_PEAK = 0.45;
 let servicesTop = 0, servicesBottom = 0;
 function measureServicesBounds() {
   servicesTop = servicesGroupEl.getBoundingClientRect().top + window.scrollY;
@@ -435,25 +432,6 @@ function updateTheme(scrollPos) {
     else if (d <= PEAK_END) veilT = 1;
     else veilT = 1 - smoothstep((d - PEAK_END) / (FALL_END - PEAK_END));
     servicesExitVeilEl.style.opacity = veilT * VEIL_PEAK;
-  }
-  // мягкая белая дымка МЕЖДУ самими карточками услуг (см. .services-
-  // card-veil в css/style.css) — не полноценный "нырок", как чёрная
-  // дымка выше, а лёгкая добавка поверх уже идущего кросс-фейда
-  // .service-visual.is-active: одиночный симметричный пик (не плато)
-  // ровно на границе каждой пары карточек. Границы — docTop каждого
-  // .service-block, КРОМЕ самого первого (SMM) — та граница вообще-то
-  // стык с hero, а не "между карточками услуг", её не трогаем
-  if (servicesCardVeilEl) {
-    const boundaries = themeSections.filter((s) => s.service).map((s) => s.docTop).slice(1);
-    let cardVeilT = 0;
-    for (const boundary of boundaries) {
-      const bd = Math.abs(rawScrollY - boundary);
-      if (bd < CARD_VEIL_HALF_WIDTH) {
-        const t = 1 - smoothstep(bd / CARD_VEIL_HALF_WIDTH);
-        if (t > cardVeilT) cardVeilT = t;
-      }
-    }
-    servicesCardVeilEl.style.opacity = cardVeilT * CARD_VEIL_PEAK;
   }
 }
 

@@ -631,20 +631,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
      цветом (у SEO предмет как раз лежит в этой зоне и терялся под ней) */
   background:linear-gradient(to right, var(--bg) 0%, transparent 22%);
 }
-/* мягкая белая дымка МЕЖДУ карточками услуг (SMM↔Таргет↔SEO↔Продакшн) —
-   см. updateServicesCardVeil в js/main.js. В отличие от чёрной дымки
-   ниже (полноценный «нырок» на выходе из всей группы) — это лёгкая
-   добавка поверх уже идущего кросс-фейда картинок
-   (.service-visual.is-active): одиночный симметричный пик ровно на
-   границе каждой пары карточек, узкий и невысокий (CARD_VEIL_PEAK),
-   чтобы смягчить сам момент склейки, а не изображать полноценное
-   затемнение сцены */
-.services-card-veil{
-  position:fixed;inset:0;z-index:2;
-  background:#fff;opacity:0;pointer-events:none;
-  will-change:opacity;
-}
-
 /* «нырок в чёрное» на стыке последней услуги и «Знакомства» — см.
    veilEl/EXIT_FADE_PX в js/main.js. Непрозрачность считается прямо от
    rawScrollY (та же техника, что и у графика затухания самой картинки
@@ -710,9 +696,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
      чёрный fixed-слой во весь экран поверх него смотрелся бы как
      самостоятельный, ничем не объяснённый глюк, а не как переход */
   .services-exit-veil{display:none;}
-  /* та же причина — белая дымка между карточками маскирует кросс-фейд
-     полноэкранных .service-visual, которого на мобильном просто нет */
-  .services-card-veil{display:none;}
 }
 
 /* ---- Кейсы ---- */
