@@ -522,6 +522,14 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
   transition:clip-path 1.1s var(--ease);
 }
 .service-block.is-visible .service-word{clip-path:inset(0 -50vw 0% -50vw);}
+/* "ПРОДАКШН" физически шире, чем остальные три слова (SMM/Таргет/SEO)
+   на том же --fs-h2 — при боксе шириной 480px (см. .service-block-inner)
+   слово упиралось в --fs-h2:110px и вылезало за пределы своей плашки
+   прямо на кадр позади. Понижаем --fs-h2 только для этого слова, тем же
+   профилем clamp, но с коэффициентом ~0.72 (подобран измерением
+   scrollWidth в браузере на ширинах от 375 до 2560px — влезает вплотную,
+   без запаса, на всех) */
+.service-block[data-service="production"] .service-word{font-size:clamp(36px, 5.2vw, 79px);}
 /* Копирайтинг по формуле наблюдение → что делаем → жирный вывод — три
    короткие строки вместо одного длинного абзаца-простыни. Последняя
    строка (--strong) чуть крупнее и на полном --fg, а не --fg-dim —
