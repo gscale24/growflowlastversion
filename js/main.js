@@ -376,7 +376,7 @@ function updateTheme(scrollPos) {
   // не меняется, текста рядом тоже нет — см. .service-block-inner, он
   // в потоке и уходит из вьюпорта раньше, чем фиксированная картинка)
   // читался как пустой обрыв, а не как продуманный переход
-  const EXIT_FADE_PX = 480;
+  const EXIT_FADE_PX = 220;
   const VEIL_PEAK = 0.94;
   const lastServiceKey = serviceVisuals[serviceVisuals.length - 1]?.dataset.service;
   serviceVisuals.forEach((v) => {
@@ -418,10 +418,14 @@ function updateTheme(scrollPos) {
   // «Знакомство» реально проявляется уже из готовой темноты, а не
   // одновременно с ней. veilRise/veilHold/veilFall — три сегмента
   // signed-расстояния rawScrollY − servicesBottom (отрицательное —
-  // подход, положительное — уже после стыка)
+  // подход, положительное — уже после стыка). Дистанции (изначально
+  // -1150/-350/200/1000) уменьшены больше чем вдвое по фидбеку — весь
+  // манёвр укладывался в 2150px скролла и читался как затянувшийся
+  // чёрный экран, а не быстрый переход; пропорции (подъём/плато/спад)
+  // сохранены теми же
   if (servicesExitVeilEl) {
     const d = rawScrollY - servicesBottom;
-    const RISE_START = -1150, PEAK_START = -350, PEAK_END = 200, FALL_END = 1000;
+    const RISE_START = -520, PEAK_START = -160, PEAK_END = 90, FALL_END = 450;
     let veilT;
     if (d <= RISE_START || d >= FALL_END) veilT = 0;
     else if (d < PEAK_START) veilT = smoothstep((d - RISE_START) / (PEAK_START - RISE_START));
