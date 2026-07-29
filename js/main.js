@@ -153,63 +153,6 @@ if (!prefersNoParallax) {
   window.addEventListener('load', measureIntroScene);
 }
 
-// заминка скролла на ВЫХОДЕ из «Знакомство» (не на входе — пробовали,
-// по фидбеку не то) — единственное место на странице, где мы реально
-// перехватываем скролл и на короткое время не даём странице ехать
-// дальше (см. README «Скролл: нативный, без сторонних библиотек» —
-// везде остальные это осознанно НЕ делают; тут по прямой просьбе
-// именно такого эффекта, не просто более длинного pin). Граница —
-// introSceneTop + introSceneTotal, та же точка, где progress в
-// updateIntroParallax достигает 1 и pin отпускает секцию (см. выше) —
-// то есть ровно момент, когда скраббинг доигран и «Знакомство» вот-вот
-// уступит место «Кейсам». Срабатывает только при пересечении этой
-// границы вниз, не при возврате назад, и каждый раз заново — прокрутили
-// обратно вверх и снова вниз, заминка повторится.
-//
-// Первая версия только вызывала preventDefault() на wheel — в headless
-// Playwright-тесте (синтетические wheel-события, обрабатываются главным
-// потоком напрямую) это честно останавливало скролл, но на реальном
-// трекпаде/колесе в Chrome эффекта не было вообще: инерционная прокрутка
-// (momentum/fling) после трекпад-жеста едет на compositor-потоке уже не
-// как поток wheel-событий, а как собственная анимация браузера — на неё
-// preventDefault() в JS-обработчике wheel не действует никак, скролл
-// просто продолжает ехать поверх "заблокированных" событий.
-//
-// Рабочее решение — не пытаться заблокировать источник скролла (это и
-// есть корень прошлой проблемы), а на время паузы каждый кадр (rAF)
-// принудительно возвращать scrollY туда, где сцена должна была
-// остановиться (граница выхода), независимо от того, чем именно скролл
-// был вызван — жестом, инерцией, клавиатурой, скроллбаром. preventDefault
-// на wheel оставлен как быстрый путь без "боя" со скроллом там, где он
-// всё же срабатывает (обычное колесо мыши без инерции) — просто больше
-// не единственная линия обороны.
-const INTRO_SCROLL_PAUSE_MS = 550;
-if (!prefersNoParallax && introSceneEl) {
-  let introPauseLastY = window.scrollY;
-  let introPauseFrozenY = null;
-  let introPauseUntil = 0;
-  window.addEventListener('wheel', (e) => {
-    if (introPauseFrozenY !== null) e.preventDefault();
-  }, { passive: false });
-  function introPauseTick() {
-    if (introPauseFrozenY === null) return;
-    if (performance.now() >= introPauseUntil) { introPauseFrozenY = null; return; }
-    if (window.scrollY !== introPauseFrozenY) window.scrollTo(0, introPauseFrozenY);
-    requestAnimationFrame(introPauseTick);
-  }
-  window.addEventListener('scroll', () => {
-    const y = window.scrollY;
-    const introSceneExitY = introSceneTop + introSceneTotal;
-    if (introPauseFrozenY === null && introPauseLastY < introSceneExitY && y >= introSceneExitY) {
-      introPauseFrozenY = introSceneExitY;
-      introPauseUntil = performance.now() + INTRO_SCROLL_PAUSE_MS;
-      window.scrollTo(0, introPauseFrozenY);
-      requestAnimationFrame(introPauseTick);
-    }
-    introPauseLastY = y;
-  }, { passive: true });
-}
-
 /* ==================================================================
    ФОН СЕКЦИЙ — вся страница как единое полотно с непрерывным градиентом
    между тёмными и светлыми разделами, а не набор карточек-секций со
