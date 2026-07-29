@@ -180,6 +180,15 @@ if (!prefersNoParallax) {
 // всё же срабатывает (обычное колесо мыши без инерции) — просто больше
 // не единственная линия обороны.
 const INTRO_SCROLL_PAUSE_MS = 550;
+// временный диагностический маркер (#introPauseDebug в index.html) —
+// красный бейдж в углу экрана, включается/выключается ровно тем же
+// условием, что держит паузу. Нужен, чтобы разграничить два разных
+// возможных бага: JS вообще не срабатывает (reduce motion, ошибка
+// скрипта, устаревший кеш) — бейдж не появляется вообще, или JS
+// срабатывает, но сама заминка не держит скролл на конкретном
+// браузере/устройстве — бейдж появляется, а страница всё равно едет.
+// Убрать вместе с div-ом в index.html после подтверждения
+const introPauseDebugEl = document.getElementById('introPauseDebug');
 if (!prefersNoParallax && introSceneEl) {
   let introPauseLastY = window.scrollY;
   let introPauseFrozenY = null;
@@ -189,7 +198,11 @@ if (!prefersNoParallax && introSceneEl) {
   }, { passive: false });
   function introPauseTick() {
     if (introPauseFrozenY === null) return;
-    if (performance.now() >= introPauseUntil) { introPauseFrozenY = null; return; }
+    if (performance.now() >= introPauseUntil) {
+      introPauseFrozenY = null;
+      if (introPauseDebugEl) introPauseDebugEl.style.display = 'none';
+      return;
+    }
     if (window.scrollY !== introPauseFrozenY) window.scrollTo(0, introPauseFrozenY);
     requestAnimationFrame(introPauseTick);
   }
@@ -199,6 +212,7 @@ if (!prefersNoParallax && introSceneEl) {
       introPauseFrozenY = introSceneTop;
       introPauseUntil = performance.now() + INTRO_SCROLL_PAUSE_MS;
       window.scrollTo(0, introPauseFrozenY);
+      if (introPauseDebugEl) introPauseDebugEl.style.display = 'block';
       requestAnimationFrame(introPauseTick);
     }
     introPauseLastY = y;
